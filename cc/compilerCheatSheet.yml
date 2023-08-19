@@ -1,0 +1,128 @@
+O0:
+  description: "No optimization"
+  use_cases:
+    - Debugging and development to ease debugging and inspecting variables.
+    - When you want to minimize compilation time.
+
+O1:
+  description: "Basic optimization"
+  use_cases:
+    - Recommended for most development and testing scenarios.
+    - Generally produces faster, smaller, and more efficient code than O0.
+
+O2:
+  description: "Moderate optimization"
+  use_cases:
+    - Suitable for most production builds.
+    - Provides significant performance improvements over O1 with only a moderate increase in compilation time.
+  
+O3:
+  description: "Aggressive optimization"
+  use_cases:
+    - Use when targeting the best possible performance.
+    - May result in larger binary size and longer compilation times.
+    - Might not be ideal for debugging as the optimizations can obscure the source code.
+
+Os:
+  description: "Optimize for size"
+  use_cases:
+    - Useful when you want to minimize the size of the binary.
+    - Sacrifices some performance to reduce the size of the output file.
+
+Ofast:
+  description: "Fastest possible optimization"
+  use_cases:
+    - Enables aggressive optimizations that may not be IEEE 754 compliant.
+    - Suitable when strict floating-point accuracy is not required.
+
+Og:
+  description: "Debugging with optimization"
+  use_cases:
+    - Optimizes for debugging experience by generating additional debug information.
+    - Can be used to help diagnose performance issues in a release build.
+
+Common Flags:
+  - "-march=native": Generate code that is optimized for the host processor architecture.
+  - "-flto": Enable link-time optimization for faster and more efficient code.
+  - "-funroll-loops": Unroll loops to reduce loop overhead and improve performance.
+-Omp:
+  description: "Enable OpenMP parallelization"
+  use_cases:
+    - Allows automatic parallelization of loops using OpenMP directives.
+    - Improves performance on multi-core systems.
+
+Ofast -funsafe-math-optimizations -march=native:
+  description: "Aggressive optimization for floating-point operations"
+  use_cases:
+    - Suitable for numerical computations, signal processing, and simulations.
+    - Enables unsafe math optimizations that might not be IEEE 754 compliant.
+    - Generates code optimized for the host processor's architecture.
+
+For GPU and Accelerator Programming:
+```yaml
+-O3 -march=native -fopenmp -fopenacc:
+  description: "Optimization for GPU and accelerator programming"
+  use_cases:
+    - Use when offloading computations to GPUs or accelerators (e.g., NVIDIA CUDA, AMD ROCm).
+    - Enables OpenACC directives for offloading computations to accelerators.
+
+For Data Pipelines and ML Modeling:
+```yaml
+-O2 -march=native -ftree-vectorize:
+  description: "Optimization for data pipelines and vectorization"
+  use_cases:
+    - Suitable for data processing pipelines and vectorized computations.
+    - Enables loop vectorization to improve performance with SIMD instructions.
+
+-funroll-loops -floop-strip-mine -floop-block -floop-interchange:
+  description: "Loop optimizations for data processing and ML modeling"
+  use_cases:
+    - Improves performance by unrolling loops and reordering loop iterations.
+    - Especially beneficial for data-intensive and iterative computations.
+
+Link-Time Optimization (LTO):
+```yaml
+-flto:
+  description: "Enable link-time optimization"
+  use_cases:
+    - Improves optimization opportunities across translation units.
+    - Produces faster and more efficient code by considering the whole program.
+-march=native -mtune=native:
+  description: "Optimization for the host machine's architecture"
+  use_cases:
+    - Generates code specifically tuned for the target machine's CPU.
+    - Improves performance for video decoding, encoding, and processing.
+
+-ffast-math -funsafe-math-optimizations:
+  description: "Aggressive optimization for floating-point operations"
+  use_cases:
+    - May not be IEEE 754 compliant, but can boost performance for video processing.
+    - Enables optimizations for floating-point calculations.
+
+For Graphics Processing:
+```yaml
+-O3 -march=native -ffast-math:
+  description: "High-level optimization for graphics processing"
+  use_cases:
+    - Generates highly optimized code for graphics algorithms and rendering.
+    - Combines various optimizations for better performance.
+
+-floop-vectorize:
+  description: "Loop vectorization for graphics algorithms"
+  use_cases:
+    - Improves performance for graphics algorithms that can be vectorized.
+    - Enables loop vectorization to utilize SIMD instructions.
+
+For GPU and Accelerator Programming in Graphics:
+```yaml
+-fopenmp -fopenacc:
+  description: "Parallelization and GPU offloading for graphics computations"
+  use_cases:
+    - Use when offloading graphics computations to GPUs or accelerators.
+    - Enables OpenACC directives for offloading computations to accelerators.
+
+-LTO -flto:
+  description: "Link-Time Optimization for graphics applications"
+  use_cases:
+    - Improves optimization across translation units for graphics code.
+    - Produces faster and more efficient code by considering the whole program.

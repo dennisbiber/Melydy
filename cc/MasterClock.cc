@@ -1,4 +1,5 @@
 #include "MasterClock.h"
+#include <fstream>
 #include <iostream>
 #include <thread>
 #include <algorithm>
@@ -11,9 +12,21 @@ bool MasterClock::superVerbose = false;
 bool MasterClock::timeVerbose = false;
 
 MasterClock::MasterClock(double bpm, double beatDivisions, bool vb, bool sVb, bool timeVerbose) : quit(false), 
-    isNoteDataReady(false), logging(false), bufferUpdated(false), 
-    divisionDurationAsDuration(std::chrono::high_resolution_clock::duration(0))
+    isNoteDataReady(false), logging(false), bufferUpdated(false), filename("duration_logs"),
+    divisionDurationAsDuration(Duration(0)),
+    timeCorrectionForBuffer(Duration(0)), processingDuration(Duration(0))
     {
+    startTime = getCurrentTime();
+    std::time_t startTimeTimeT = std::chrono::high_resolution_clock::to_time_t(startTime);
+    std::tm localTime = *std::localtime(&startTimeTimeT);
+
+    // Create a time format string
+    std::ostringstream timeFormat;
+    timeFormat << std::put_time(&localTime, "%Y-%m-%d_%H-%M-%S");
+
+    // Convert the ostringstream to a string
+    std::string formattedTime = timeFormat.str();
+    filename = filename + "_" + formattedTime + ".txt";
     setVerboseStatus(vb, sVb, timeVerbose);
     this->setBPM(bpm);
     this->beatDivisions = beatDivisions;
@@ -28,9 +41,6 @@ MasterClock::~MasterClock(){
 // Start/Stop Section
 //###################################################################################################################
 void MasterClock::start() {
-    // Initialize the startTime when starting the clock
-    startTime = getCurrentTime();
-
     // Calculate the duration of one beat based on the BPM
     divisionDurationAsDuration = calculateDivisionDuration();
     if (verbose) {
@@ -125,85 +135,18 @@ void MasterClock::waitForBufferUpdate() {
     bufferUpdated = false; // Reset the flag
 }
 
+void MasterClock::writeStringToFile(const std::string& content) {
+    std::ofstream outputFile(filename, std::ios_base::app);
+    if (outputFile.is_open()) {
+        outputFile << content;
+        outputFile.close(); // Close the file
+    } else {
+        std::cerr << "Error opening file for writing!" << std::endl;
+    }
+}
+
 // Scheduler Section
 //###################################################################################################################
-// bool MasterClock::containsScheduledAction(const std::string& idTag) {
-//     std::lock_guard<std::mutex> lock(scheduledIntervalsMutex);
-//     return idTagToIndex.find(idTag) != idTagToIndex.end();
-// }
-
-// void MasterClock::removeScheduledAction(const std::string& idTag) {
-//     if (verbose && superVerbose) {
-//         printf("   MasterClock::removeScheudledAction::ID Tag: %s.\n", idTag.c_str());
-//     }
-//     std::lock_guard<std::mutex> lock(scheduledIntervalsMutex);
-//     auto it = idTagToIndex.find(idTag);
-//     if (it != idTagToIndex.end()) {
-//         size_t indexToRemove = it->second;
-//         idTagToIndex.erase(it);
-//         if (indexToRemove != scheduledActions.size() - 1) {
-//             std::swap(scheduledActions[indexToRemove], scheduledActions.back());
-//             idTagToIndex[scheduledActions[indexToRemove].fetchIDTag()] = indexToRemove;
-//         }
-
-//         scheduledActions.pop_back();
-//     }
-// }
-
-// void MasterClock::modifyScheduledInterval(const std::string& idTag, Duration interval) {
-//     std::lock_guard<std::mutex> lock(scheduledIntervalsMutex);
-//     auto it = idTagToIndex.find(idTag);
-//     if (it != idTagToIndex.end()) {
-//         scheduledActions[it->second].updatedDuration(interval);
-//     }
-// }
-
-// void MasterClock::scheduleActionAtInterval(std::function<void()> function, Duration interval, const std::string& idTag) {
-//     if (verbose && superVerbose) {
-//         printf("   MasterClock::scheduleActionAtInterval::ID Tag: %s.\n", idTag.c_str());
-//     }
-//     std::lock_guard<std::mutex> lock(scheduledIntervalsMutex);
-
-//     // Calculate the execution time for the first occurrence
-//     TimePoint executionTime = getCurrentTime() + interval;
-
-//     ScheduleAction action(function, executionTime, true, interval, idTag);
-
-//     // Use lower_bound to find the correct insertion position
-//     auto it = std::lower_bound(scheduledActions.begin(), scheduledActions.end(), action,
-//         [](const ScheduleAction& lhs, const ScheduleAction& rhs) {
-//             return lhs.fetchTimePoint() < rhs.fetchTimePoint();
-//         });
-
-//     // Insert the action at the determined position
-//     scheduledActions.insert(it, action);
-//     idTagToIndex.emplace(idTag, it - scheduledActions.begin());
-// }
-
-// void MasterClock::executeScheduledActions() {
-//     std::this_thread::sleep_for(std::chrono::microseconds(500));
-//     std::vector<ScheduleAction> nextCyclesAction;
-//     std::lock_guard<std::mutex> lock(scheduledIntervalsMutex);
-
-//     while (!scheduledActions.empty() && scheduledActions.front().fetchTimePoint() <= getCurrentTime()) {
-//         ScheduleAction action = std::move(scheduledActions.front());
-//         scheduledActions.pop_front();
-//         action.execute();
-
-//         if (action.fetchLoopingFlag()) {
-//             TimePoint executionTime = getCurrentTime() + action.fetchDuration();
-//             action.updateTimePoint(executionTime);
-
-//             // Reinsert the action at the correct position
-//             auto it = std::lower_bound(scheduledActions.begin(), scheduledActions.end(), action,
-//                 [](const ScheduleAction& lhs, const ScheduleAction& rhs) {
-//                     return lhs.fetchTimePoint() < rhs.fetchTimePoint();
-//                 });
-
-//             scheduledActions.insert(it, std::move(action));
-//         }
-//     }
-// }
 bool MasterClock::containsBatchActions(const std::string& idTag) const {
     return searchBatchActions(idTag);
 }
@@ -211,20 +154,18 @@ bool MasterClock::containsBatchActions(const std::string& idTag) const {
 void MasterClock::removeBatchFromQueue(const std::string& idTag) {
     std::lock_guard<std::mutex> lock(scheduledIntervalsMutex);
 
-    if (containsBatchActions(idTag)) {
-        auto it = std::find_if(scheduledActionBatches.begin(), scheduledActionBatches.end(),
-                               [&idTag](const BatchActions& batch) { return batch.getIDTag() == idTag; });
+    auto it = std::find_if(scheduledActionBatches.begin(), scheduledActionBatches.end(),
+                            [&idTag](const BatchActions& batch) { return batch.getIDTag() == idTag; });
 
-        if (it != scheduledActionBatches.end()) {
-            size_t indexToRemove = std::distance(scheduledActionBatches.begin(), it);
-            idTagToBatchIndex.erase(idTag);
+    if (it != scheduledActionBatches.end()) {
+        size_t indexToRemove = std::distance(scheduledActionBatches.begin(), it);
+        idTagToBatchIndex.erase(idTag);
 
-            scheduledActionBatches.erase(it);
+        scheduledActionBatches.erase(it);
 
-            // Update the indices in idTagToBatchIndex for the remaining batches
-            for (size_t i = indexToRemove; i < scheduledActionBatches.size(); ++i) {
-                idTagToBatchIndex[scheduledActionBatches[i].getIDTag()] = i;
-            }
+        // Update the indices in idTagToBatchIndex for the remaining batches
+        for (size_t i = indexToRemove; i < scheduledActionBatches.size(); ++i) {
+            idTagToBatchIndex[scheduledActionBatches[i].getIDTag()] = i;
         }
     }
 }
@@ -253,12 +194,17 @@ size_t MasterClock::getIndexForBatch(const BatchActions& batch) const {
 
 
 void MasterClock::addItemToBatchAtInterval(std::function<void()> function, Duration interval, 
-    const std::string& idTag) {
+    const std::string& idTag, bool isLooping) {
     std::lock_guard<std::mutex> lock(scheduledIntervalsMutex);
+    bool keypadFlag = false;
 
     // Check if a batch with the same idTag and interval exists
     std::string pattern = "KP[1-9]";  // Pattern for idTag
-    if (std::regex_match(idTag, std::regex(pattern)) && interval.count() > 0) {
+    if (std::regex_match(idTag, std::regex(pattern))) {
+        keypadFlag = true;
+    }
+
+    if (interval.count() > 0) {
         auto it = idTagToBatchIndex.find(idTag);
         if (it != idTagToBatchIndex.end()) {
             if (scheduledActionBatches[it->second].getDuration() == interval) {
@@ -266,48 +212,66 @@ void MasterClock::addItemToBatchAtInterval(std::function<void()> function, Durat
                 // You might want to update the execution time or loop interval here
             } else {
                 // Duration mismatch, create a new BatchActions
-                createNewBatchAndAddAction(function, interval, idTag);
+                createNewBatchAndAddAction(function, interval, idTag, isLooping);
             }
         } else {
             // Batch doesn't exist, create a new BatchActions
-            createNewBatchAndAddAction(function, interval, idTag);
+            createNewBatchAndAddAction(function, interval, idTag, isLooping);
         }
     }
 }
 
 void MasterClock::createNewBatchAndAddAction(std::function<void()> function, Duration interval, 
-    const std::string& idTag) {
+    const std::string& idTag, bool isLooping) {
     TimePoint executionTime = getCurrentTime() + interval;
-    BatchActions newBatch({ ScheduleAction(function) }, executionTime, idTag, false, interval);
-    scheduledActionBatches.push_back(std::move(newBatch));
-    idTagToBatchIndex[idTag] = scheduledActionBatches.size() - 1;
+    BatchActions newBatch({ ScheduleAction(function) }, executionTime, idTag, isLooping, interval);
+    
+    // Find the appropriate position to insert the new batch to maintain sorted order
+    auto insertPos = std::lower_bound(scheduledActionBatches.begin(), scheduledActionBatches.end(), newBatch,
+        [](const BatchActions& lhs, const BatchActions& rhs) {
+            return lhs.getExecutionTime() < rhs.getExecutionTime();
+        });
+
+    // Insert the new batch at the calculated position
+    scheduledActionBatches.insert(insertPos, std::move(newBatch));
+    
+    // Update idTagToBatchIndex with the correct index for the newly inserted batch
+    idTagToBatchIndex[idTag] = std::distance(scheduledActionBatches.begin(), insertPos);
 }
 
 void MasterClock::executeScheduledBatches() {
     while (!quit.load(std::memory_order_acquire)) {
+        startTimer("ScheduleThreadProcess", true);
         TimePoint currentTime = getCurrentTime();
-        TimePoint nextExecutionTime = TimePoint::max();
-        // Calculate the sleep duration until the next execution
-        if (nextExecutionTime > currentTime) {
-            Duration sleepDuration = std::chrono::duration_cast<Duration>(nextExecutionTime - currentTime);
-            std::this_thread::sleep_for(sleepDuration);
-        }
-
+        TimePoint nextExecutionTime = TimePoint::max();;
         {
             std::lock_guard<std::mutex> lock(scheduledIntervalsMutex);
+            timeCorrectionForBuffer += processingDuration;
             for (auto& batch : scheduledActionBatches) {
                 if (batch.getExecutionTime() <= currentTime) {
-                    batch.executeBatch();
+                    if (batch.getIDTag() == "timePointQueue") {
+                        batch.executeBatchWithCorrection(timeCorrectionForBuffer);
+                        timeCorrectionForBuffer = Duration(0);
+                    } else {
+                        batch.executeBatch();
+                    }
                     if (batch.getLoopingFlag()) {
-                        TimePoint newExecutionTime = currentTime + batch.getDuration();
-                        batch.setTimePoint(newExecutionTime);
+                        TimePoint nextExecutionTime = currentTime + batch.getDuration();
+                        batch.setTimePoint(nextExecutionTime);
                         idTagToBatchIndex[batch.getIDTag()] = getIndexForBatch(batch);
                     }
-                } else {
-                    // Calculate the time until the next batch's execution
-                    nextExecutionTime = std::min(nextExecutionTime, batch.getExecutionTime());
                 }
+                nextExecutionTime = std::min(nextExecutionTime, batch.getExecutionTime());
             }
+        }
+        startTimer("ScheduleThreadProcess", false);
+        processingDuration = getDuration("ScheduleThreadProcess");
+        Duration sleepDuration = std::chrono::duration_cast<Duration>(nextExecutionTime - currentTime - processingDuration);
+        std::string sleepDurationLog = "MasterClock::executeScheduledBatches::Duration: " +  std::to_string(std::chrono::duration_cast<
+            std::chrono::microseconds>(sleepDuration).count()) + " (ms)\n";
+        writeStringToFile(sleepDurationLog);
+        if (sleepDuration > Duration::zero()) {
+            std::this_thread::sleep_for(sleepDuration);
         }
     }
 }
@@ -320,8 +284,8 @@ void MasterClock::timerLoop() {
         printf("   MasterClock::timerLoop::Entered.\n");
     }
     addItemToBatchAtInterval([&]() {
-        this->timePointQueue(); // Call the function you want to execute
-    }, divisionDurationAsDuration - std::chrono::microseconds(500), "timePointQueue");
+        this->timePointQueue(this->timeCorrectionForBuffer); // Call the function you want to execute
+    }, divisionDurationAsDuration - std::chrono::microseconds(500), "timePointQueue", true);
     if (verbose) {
         printf("   MasterClock::timerLoop::TimePointQueue Scheudled.\n");
     }
@@ -337,17 +301,28 @@ void MasterClock::initTimePointQueue() {
 }
 
 // Update the static function to accept MasterClock& argument and remove the redundant arguments
-void MasterClock::timePointQueue() {
+void MasterClock::timePointQueue(Duration correctionTime) {
     std::lock_guard<std::mutex> lock(divisionTimesMutex);
     bufferUpdated = true;
     bufferUpdateCV.notify_all();
     TimePoint lastTimePoint = divisionTimes.back();
-    nextDivisionTime = lastTimePoint + divisionDurationAsDuration;
+    nextDivisionTime = lastTimePoint + divisionDurationAsDuration - correctionTime;
     // Add the next beat time to the vector in a FIFO manner
     if (divisionTimes.size() >= 5) {
         divisionTimes.erase(divisionTimes.begin()); // Remove the oldest beat if the vector is already full
     }
     divisionTimes.push_back(nextDivisionTime);
+    std::string timeCorrectionLog = "MasterClock::timePointQueue::TimeCorrection: "
+        +  std::to_string(std::chrono::duration_cast<
+        std::chrono::microseconds>(correctionTime).count()) + " (microseconds)\n";
+    std::string nextEntryLog = "MasterClock::timePointQueue::NextDivisionTime: " +  
+        std::to_string(std::chrono::duration_cast<
+        std::chrono::microseconds>(nextDivisionTime - getCurrentTime()).count()) + " (microseconds)\n";
+    std::string durationCheck = "MasterClock::timePointQueue::CurrentDivisionTime: " +  
+        std::to_string(std::chrono::duration_cast<
+        std::chrono::microseconds>(divisionTimes[3] - getCurrentTime()).count()) + " (microseconds)\n";
+    std::string logEntry = timeCorrectionLog + durationCheck + nextEntryLog;
+    writeStringToFile(logEntry);
 }
 // Process Timer Section
 //###################################################################################################################
@@ -376,6 +351,22 @@ void MasterClock::startTimer(const std::string& processName, bool start) {
             it->second.second = getCurrentTime();
         }
     }
+}
+
+Duration MasterClock::getDuration(const std::string& processName) {
+    std::lock_guard<std::mutex> lock(timerMutex);
+    for (auto it = processRecords.begin(); it != processRecords.end(); ++it) {
+        const auto& record = *it;
+
+        if (record.first == processName && record.second.first != TimePoint() && record.second.second != TimePoint()) {
+            const Duration duration = record.second.second - record.second.first;
+            // Erase the entry from the vector before returning
+            processRecords.erase(it);
+
+            return duration;
+        }
+    }
+    return Duration(-1); // If processName not found or start/end time not set
 }
 
 std::string MasterClock::getDurationString(const std::string& processName) {

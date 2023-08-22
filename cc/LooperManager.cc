@@ -94,7 +94,7 @@ void LooperManager::audioLooperHandler() {
 }
 
 
-bool LooperManager::addAudioLooper(const std::string& keypadIDStr, AudioPlayer* player, double loopDuration) {
+bool LooperManager::addAudioLooper(const std::string& keypadIDStr, AudioPlayer* player, double loopDuration, std::string keypadString) {
     int keypadID = 0;
     std::lock_guard<std::mutex> lock(audioLoopersMutex);
     if (!audioLoopers.empty()) {
@@ -112,7 +112,7 @@ bool LooperManager::addAudioLooper(const std::string& keypadIDStr, AudioPlayer* 
         printf("      LooperManager::addAudioLooper::Looper Duration %f.\n", loopDuration);
     }
     try {
-        auto audioLooper = std::make_shared<AudioLooper>(masterClock, player, loopDuration, audioLooperVerbose);
+        auto audioLooper = std::make_shared<AudioLooper>(masterClock, player, loopDuration, audioLooperVerbose, keypadString);
         audioLooper->startLoop();
         audioLoopers[keypadID] = {keypadIDStr, {false, audioLooper}}; // Set both the integer ID and the AudioLooper pointer
         return true;

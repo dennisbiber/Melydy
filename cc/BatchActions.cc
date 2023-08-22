@@ -39,6 +39,14 @@ void BatchActions::addScheduledAction(ScheduleAction action) {
     batch.push_back(std::move(action));
 }
 
+void BatchActions::executeBatchWithCorrection(Duration timeCorrection) {
+    std::lock_guard<std::mutex> lock(actionsMutex);
+    for (auto& action : batch) {
+        action.setTimeCorrection(timeCorrection);
+        action.execute();
+        action.setTimeCorrectionFlagFalse();
+    }
+}
 
 void BatchActions::executeBatch() const {
     std::lock_guard<std::mutex> lock(actionsMutex);

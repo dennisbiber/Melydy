@@ -15,6 +15,7 @@
 #include <chrono>
 #include <vector>
 #include <thread>
+#include <iomanip>
 #include <mutex>
 #include <condition_variable>
 #include <queue>
@@ -44,36 +45,34 @@ public:
     // Process Timer
     void startTimer(const std::string& processName, bool start);
     std::string getDurationString(const std::string& processName);
+    Duration getDuration(const std::string& processName);
+    void writeStringToFile(const std::string& content);
     bool isNoteDataEmpty();
     void updateWindwoTimeValues();
     void waitForBufferUpdate();
 
     void timerLoop();
-    void scheduleActionAtInterval(std::function<void()> function, Duration interval, const std::string& idTag);
-    void removeScheduledAction(const std::string& idTag);
-    void modifyScheduledInterval(const std::string& idTag, Duration interval);
-    bool containsScheduledAction(const std::string& idTag);
 
     bool containsBatchActions(const std::string& idTag) const;
     void removeBatchFromQueue(const std::string& idTag);
-    void addItemToBatchAtInterval(std::function<void()> function, Duration interval, const std::string& idTag);
+    void addItemToBatchAtInterval(std::function<void()> function, Duration interval, 
+        const std::string& idTag, bool isLooping);
 
 private:
     // declare member functions
     static void emptyFunction(MasterClock&) {};
     Duration calculateDivisionDuration() const;
-    void timePointQueue();
+    void timePointQueue(Duration correctionTime);
     void initTimePointQueue();
     static void setVerboseStatus(bool vb, bool sVb, bool tVb);
-    void executeScheduledActions();
     void executeScheduledBatches();
-    void createNewBatchAndAddAction(std::function<void()> function, Duration interval, const std::string& idTag);
+    void createNewBatchAndAddAction(std::function<void()> function, Duration interval,
+        const std::string& idTag, bool isLooping);
     bool searchBatchActions(const std::string& idTag) const;
     size_t getIndexForBatch(const BatchActions& batch) const;
 
     // declare member variables
     double bpm;
-    bool isRunning;
     std::atomic<bool> quit;
     double beatDivisions;
     static bool verbose;
@@ -82,17 +81,18 @@ private:
     bool bufferUpdated;
     bool isNoteDataReady;
     bool logging;
+    std::string filename;
 
     // declare time units
     TimePoint startTime;
     Duration divisionDurationAsDuration;
+    Duration timeCorrectionForBuffer;
     TimePoint nextDivisionTime;
+    Duration processingDuration;
 
+    // declare structures
     std::vector<std::pair<std::string, std::pair<TimePoint, TimePoint>>> processRecords;
-
     std::vector<TimePoint> divisionTimes;
-    // std::unordered_map<std::string, size_t> idTagToIndex;
-    // std::deque<ScheduleAction> scheduledActions;
     std::unordered_map<std::string, size_t> idTagToBatchIndex;
     std::deque<BatchActions> scheduledActionBatches;
     

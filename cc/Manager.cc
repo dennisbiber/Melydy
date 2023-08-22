@@ -162,23 +162,19 @@ void Manager::busyWaitHack() {
         }
     }
     while (run) {
-        if (verbose && timeVerbose) {
-            masterClock.startTimer("LOOP TIMER", true);
-        }
+        masterClock.startTimer("LOOP TIMER", true);
         masterClock.waitForBufferUpdate();
         setFunction();
         loopSetter();
+        masterClock.startTimer("LOOP TIMER", false);
+        Duration processTimeDuration = masterClock.getDuration("LOOP TIMER");
         std::chrono::high_resolution_clock::time_point nextDivisionTime = masterClock.getDivisionTimePoint(3);
         std::chrono::high_resolution_clock::time_point currentTime = masterClock.getCurrentTime();
-        std::chrono::high_resolution_clock::duration timeToWait = nextDivisionTime - currentTime;
-        if (verbose && superVerbose) {
-            auto timeToWaitDuration = std::chrono::duration_cast<std::chrono::milliseconds>(timeToWait);
-            if (timeVerbose) {
-                printf("Next Division Time: %lld units\n", nextDivisionTime.time_since_epoch().count());
-                printf("Current Time: %lld units\n", currentTime.time_since_epoch().count());
-            }
-            printf("   Manager::Manager Thread::timeToWait: %lld ms\n", timeToWaitDuration.count());
-        }
+        std::chrono::high_resolution_clock::duration timeToWait = nextDivisionTime - currentTime + processTimeDuration;
+        std::string timeTowWaitLog = "Manager::ManagerThread::TimeToWait: "
+            +  std::to_string(std::chrono::duration_cast<
+            std::chrono::microseconds>(timeToWait).count()) + " (microseconds)\n";
+        masterClock.writeStringToFile(timeTowWaitLog);
         if (currentTime >= nextDivisionTime) {
             if (verbose && timeVerbose) {
                 printf("   Manager::Loop crashed.\n");
@@ -197,7 +193,7 @@ void Manager::busyWaitHack() {
             run = false;
         } else {
             managerThreadCV.notify_all();
-            std::this_thread::sleep_until(nextDivisionTime - std::chrono::milliseconds(4));
+            std::this_thread::sleep_until(nextDivisionTime - std::chrono::milliseconds(1));
             if (verbose && timeVerbose) {
                 masterClock.startTimer("LOOP TIMER", false);
                 printf("%s.\n", masterClock.getDurationString("LOOP TIMER").c_str());

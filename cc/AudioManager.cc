@@ -202,7 +202,7 @@ void AudioManager::audioPlaybackHandler() {
                     }
                     if (activeLooper && addLooper) {
                         player->playAudio();
-                        looperManager.addAudioLooper(keypadIDString, player, loopDuration);
+                        looperManager.addAudioLooper(keypadIDString, player, loopDuration, keypadIDString);
                     } else {
                         player->playAudio();
                     }

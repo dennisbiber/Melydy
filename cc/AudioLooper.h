@@ -17,7 +17,8 @@
 
 class AudioLooper {
 public:
-    AudioLooper(MasterClock& mc, AudioPlayer* player, double interval, bool verbose);
+    AudioLooper(MasterClock& mc, AudioPlayer* player, double interval, bool verbose,
+        std::string keypadID);
     // Move Constructor
     AudioLooper(AudioLooper&& other) noexcept;
     ~AudioLooper();
@@ -42,6 +43,7 @@ private:
     bool isLooping; // Whether the audio is currently looping
     double beatDivisions; // Number of divisions per beat from the MasterClock.
     bool verbose;
+    std::string keyID;
     std::chrono::high_resolution_clock::duration divisionDurationAsDuration;
     std::chrono::high_resolution_clock::duration intervalDuration;
     std::vector<std::chrono::high_resolution_clock::time_point> intervalTimes;

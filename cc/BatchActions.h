@@ -59,6 +59,7 @@ class BatchActions {
         bool operator<(const BatchActions& other) const;
 
         void executeBatch() const;
+        void executeBatchWithCorrection(Duration timeCorrection);
 
         void setTimePoint(TimePoint newExecutionTime);
         TimePoint getExecutionTime() const;

@@ -18,7 +18,8 @@ class LooperManager {
         std::condition_variable& managerThreadCV, std::mutex& managerThreadMutex);
         ~LooperManager();
         void audioLooperHandler();
-        bool addAudioLooper(const std::string& keypadIDStr, AudioPlayer* player, double loopDuration);
+        bool addAudioLooper(const std::string& keypadIDStr, AudioPlayer* player, double loopDuration, 
+            std::string keypadString);
         void loopSetter();
         void startHandlingLooping();
         void stopHandlingLooping();

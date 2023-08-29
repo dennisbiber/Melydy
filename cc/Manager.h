@@ -33,17 +33,16 @@ class Manager {
             const YAML::Node& audioMixerConfig);
         ~Manager();
 
-        void startManageProcessing();
-        void setFunction();
-        void startAudioLooperThread();
-        void startAudioPlaybackThread();
-        void startKeyboardThread();
-        void startAnimationThread();
-        void busyWaitHack();
         void joinManagerThread();
-        void loopSetter();
+        void updateStates();
+        void setFunction();
         
     private:
+        void scheduleupdateStates();
+        void scheduleAudioLooperTask();
+        void scheduleAudioPlaybackTask();
+        void startKeyboardThread();
+        void startAnimationThread();
         MasterClock& masterClock;
         KeyboardEvent keyboardEvent;
         LooperManager looperManager;

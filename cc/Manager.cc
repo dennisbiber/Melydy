@@ -44,9 +44,10 @@ Manager::Manager(MasterClock& mc,
     if (verbose) {
         printf("   Manager::Audio Information set.\n");
     }
-    startAudioLooperThread();
-    startAudioPlaybackThread();
+    scheduleAudioLooperTask();
+    scheduleAudioPlaybackTask();
     startKeyboardThread();
+    scheduleupdateStates();
     // startAnimationThread();
     if (verbose) {
         printf("   Manager::Constructed.\n");
@@ -55,7 +56,6 @@ Manager::Manager(MasterClock& mc,
 
 Manager::~Manager() {
     joinManagerThread();
-
 }
 
 void Manager::joinManagerThread() {
@@ -63,8 +63,8 @@ void Manager::joinManagerThread() {
     keyboardEvent.stopHandlingEvents();
     graphicManager.stopAnimationWindow();
     printf("   Manager::joinManagerThread::KeyboardEventThread Down.\n");
-    audioManager.setAudioPlabackThreadStatus(false);
-    printf("   Manager::joinManagerThread::AudioPlaybackThread Down.\n");
+    audioManager.unschedulePlayback();
+    printf("   Manager::joinManagerThread::unschedulePlayback Done.\n");
 }
 // Getter/Setter Section
 //###################################################################################################################
@@ -98,7 +98,7 @@ void Manager::setFunction() {
     }
 }
 
-void Manager::loopSetter() {
+void Manager::updateStates() {
     for (int index = 1; index <= 9; index++) {
         std::string key = "KP" + std::to_string(index);
         auto it = stringBoolPairs.find(key);
@@ -115,21 +115,22 @@ void Manager::loopSetter() {
     if (keyboardEvent.getKeypadStates(-2)) {
         looperManager.setRemoveLooper(keyboardEvent.getKeypadStates(-2));
     }
+    setFunction();
 }
 // Manager Thread Section
 //###################################################################################################################
-void Manager::startAudioLooperThread() {
+void Manager::scheduleAudioLooperTask() {
     if (verbose) {
         printf("   Manager::startAudioLooperThread.\n");
     }
-    looperManager.startHandlingLooping();
+    looperManager.scheduleLooperTask();
 }
 
-void Manager::startAudioPlaybackThread() {
+void Manager::scheduleAudioPlaybackTask() {
     if (verbose) {
-        printf("   Manager::startAudioPlaybackThread.\n");
+        printf("   Manager::scheduleAudioPlaybackTask.\n");
     }
-    audioManager.startHandlingPlayback();
+    audioManager.schedulePlayback();
 }
 
 void Manager::startAnimationThread() {
@@ -146,59 +147,12 @@ void Manager::startKeyboardThread() {
     keyboardEvent.startHandlingEvents();
 }
 
-void Manager::busyWaitHack() {
-    bool run = true;
-    while (true) {
-        if (verbose) {
-            printf("   Manager::startAudioProcessing::Waiting for beatTime Array to fill.\n");
-        }
-        // Check if nextDivisionTime is a valid time_point
-        if (masterClock.getDivisionTimePoint(3).time_since_epoch().count() < 0) {
-            // Invalid time_point, sleep for 1 second
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        } else {
-            printf("   Manager::startAudioProcessing::Valid time_point found.\n");
-            break;
-        }
+void Manager::scheduleupdateStates() {
+    if (verbose) {
+        printf("   Manager::scheduleupdateStates.\n");
     }
-    while (run) {
-        masterClock.startTimer("LOOP TIMER", true);
-        masterClock.waitForBufferUpdate();
-        setFunction();
-        loopSetter();
-        masterClock.startTimer("LOOP TIMER", false);
-        Duration processTimeDuration = masterClock.getDuration("LOOP TIMER");
-        std::chrono::high_resolution_clock::time_point nextDivisionTime = masterClock.getDivisionTimePoint(3);
-        std::chrono::high_resolution_clock::time_point currentTime = masterClock.getCurrentTime();
-        std::chrono::high_resolution_clock::duration timeToWait = nextDivisionTime - currentTime + processTimeDuration;
-        std::string timeTowWaitLog = "Manager::ManagerThread::TimeToWait: "
-            +  std::to_string(std::chrono::duration_cast<
-            std::chrono::microseconds>(timeToWait).count()) + " (microseconds)\n";
-        masterClock.writeStringToFile(timeTowWaitLog);
-        if (currentTime >= nextDivisionTime) {
-            if (verbose && timeVerbose) {
-                printf("   Manager::Loop crashed.\n");
-                masterClock.startTimer("LOOP TIMER", false);
-                printf("%s.\n", masterClock.getDurationString("LOOP TIMER").c_str());
-            }
-            if (superVerbose) {
-                printf("   Manager::Manager Thread::timeToWait was less than zero.\n");
-            }
-            // Release
-            run = false;
-        } else if (masterClock.getQuitState()) {
-            if (verbose) {
-                printf("   Manager::Manager Thread::Clock Signaled to close Manager.\n");
-            }
-            run = false;
-        } else {
-            managerThreadCV.notify_all();
-            std::this_thread::sleep_until(nextDivisionTime - std::chrono::milliseconds(1));
-            if (verbose && timeVerbose) {
-                masterClock.startTimer("LOOP TIMER", false);
-                printf("%s.\n", masterClock.getDurationString("LOOP TIMER").c_str());
-            }
-        }
-    }
-    printf("   Manager::busyWaitHack::While Loop Exited.\n");
+    masterClock.setRuntimeTasks([&]() {
+        this->updateStates(); 
+    });
 }
+

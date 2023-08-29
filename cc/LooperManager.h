@@ -9,6 +9,12 @@
 #include "Structures.h"
 #include <vector>
 
+struct AudioLooperInfo {
+    std::string keypadIDStr;
+    bool isLooping;
+    std::shared_ptr<AudioLooper> audioLooper;
+};
+
 class LooperManager {
     public:
         LooperManager(MasterClock& mc, KeyboardEvent& kb,
@@ -17,15 +23,14 @@ class LooperManager {
         bool audioLooperVerbose, bool graphicLooperVerbose,
         std::condition_variable& managerThreadCV, std::mutex& managerThreadMutex);
         ~LooperManager();
-        void audioLooperHandler();
-        bool addAudioLooper(const std::string& keypadIDStr, AudioPlayer* player, double loopDuration, 
-            std::string keypadString);
+        void audioLooperTask();
+        bool addAudioLooper(const std::string& keypadIDStr, AudioPlayer* player, double loopDuration);
         void loopSetter();
-        void startHandlingLooping();
-        void stopHandlingLooping();
+        void scheduleLooperTask();
         void setRemoveLooper(bool removeState);
 
     private:
+        void removeAudioLoopers(const std::string& keypadIDStr);
         MasterClock& masterClock;
         KeyboardEvent& keyboardEvent;
 
@@ -42,7 +47,9 @@ class LooperManager {
         std::mutex audioLoopersMutex;
         std::condition_variable& managerThreadCV;
         std::mutex& managerThreadMutex;
-        std::unordered_map<int, std::pair<std::string, std::pair<bool, std::shared_ptr<AudioLooper>>>> audioLoopers;
+        //std::unordered_map<std::string, std::pair<std::string, std::pair<bool, std::shared_ptr<AudioLooper>>>> audioLoopers;
+        std::unordered_multimap<std::string, AudioLooperInfo> audioLoopers;
+        std::unordered_multimap<std::string, std::shared_ptr<AudioLooper>> keypadIDToLoopers;
         const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs;
 };
 

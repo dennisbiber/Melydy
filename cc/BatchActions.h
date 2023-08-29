@@ -61,7 +61,7 @@ class BatchActions {
         void executeBatch() const;
         void executeBatchWithCorrection(Duration timeCorrection);
 
-        void setTimePoint(TimePoint newExecutionTime);
+        void setExecutionTime(TimePoint newExecutionTime);
         TimePoint getExecutionTime() const;
         std::string getIDTag() const;
         void setDuration(Duration newDuration);

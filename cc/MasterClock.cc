@@ -14,7 +14,8 @@ bool MasterClock::timeVerbose = false;
 MasterClock::MasterClock(double bpm, double beatDivisions, bool vb, bool sVb, bool timeVerbose) : quit(false), 
     isNoteDataReady(false), logging(false), bufferUpdated(false), filename("duration_logs"),
     divisionDurationAsDuration(Duration(0)),
-    timeCorrectionForBuffer(Duration(0)), processingDuration(Duration(0))
+    timeCorrectionForBuffer(Duration(0)), processingDuration(Duration(0)),
+    currentDivisionOfBeat(0)
     {
     startTime = getCurrentTime();
     std::time_t startTimeTimeT = std::chrono::high_resolution_clock::to_time_t(startTime);
@@ -41,28 +42,11 @@ MasterClock::~MasterClock(){
 // Start/Stop Section
 //###################################################################################################################
 void MasterClock::start() {
-    // Calculate the duration of one beat based on the BPM
     divisionDurationAsDuration = calculateDivisionDuration();
-    if (verbose) {
-        printf("   MasterClock::start::Init TimePoint Queue.\n");
-    }
-    // Start the timer thread for synchronized playback
-    initTimePointQueue();
-    if (verbose) {
-        printf("   MasterClock::start::Starting Thread.\n");
-    }
-    timerThread = std::thread(&MasterClock::timerLoop, this);
-}
-
-bool MasterClock::getQuitState() {
-    return quit;
 }
 
 void MasterClock::stop() {
     quit.store(true, std::memory_order_release);  // Signal the timer thread to quit
-    if (timerThread.joinable()) {
-        timerThread.join(); // Wait for the timer thread to finish
-    }
 }
 // Getter/Setter Section
 //###################################################################################################################
@@ -82,10 +66,13 @@ double MasterClock::getBPM() const {
     return bpm;
 }
 
+int MasterClock::getCurrentDivisonOfBeat() {
+    return currentDivisionOfBeat;
+}
+
 TimePoint MasterClock::getCurrentTime() const {
     return std::chrono::high_resolution_clock::now();
 }
-
 
 Duration MasterClock::fetchDivisionDurationAsDuration() const {
     return divisionDurationAsDuration;
@@ -106,33 +93,11 @@ Duration MasterClock::calculateDivisionDuration() const {
     if (verbose) {
         printf("   MasterClock::calculateDivisionDuration::BPM: %f\n", bpm);
         printf("   MasterClock::calculateDivisionDuration::beatDivisions: %f\n", beatDivisions);
-        printf("   MasterClock::calculateDivisionDuration::Duration: %lld ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(duration).count());
+        printf("   MasterClock::calculateDivisionDuration::Duration: %lld microsecond\n", 
+            std::chrono::duration_cast<std::chrono::microseconds>(duration).count());
     }
     
     return duration;
-}
-
-TimePoint MasterClock::getDivisionTimePoint(int index) const {
-    std::lock_guard<std::mutex> lock(divisionTimesMutex);
-    // If the index is negative, convert it to a positive index from the end
-    if (index < 0) {
-        index += static_cast<int>(divisionTimes.size());
-    }
-
-    // Check if the final index is still out of bounds
-    if (index < 0 || static_cast<std::size_t>(index) >= divisionTimes.size()) {
-        if (verbose) {
-            printf("   ---MasterClock::getDivisionTimePoint::Index out of bounds.\n");
-        }
-        return TimePoint::min();
-    }
-    return divisionTimes[index];
-}
-
-void MasterClock::waitForBufferUpdate() {
-    std::unique_lock<std::mutex> lock(divisionTimesMutex);
-    bufferUpdateCV.wait(lock, [this] { return bufferUpdated; });
-    bufferUpdated = false; // Reset the flag
 }
 
 void MasterClock::writeStringToFile(const std::string& content) {
@@ -172,13 +137,10 @@ void MasterClock::removeBatchFromQueue(const std::string& idTag) {
 
 bool MasterClock::searchBatchActions(const std::string& idTag) const {
     std::lock_guard<std::mutex> lock(scheduledIntervalsMutex);
-    for (const BatchActions& batch : scheduledActionBatches) {
-        if (batch.getIDTag() == idTag) {
-            return true;
-        }
-    }
-    return false;
+    return std::any_of(scheduledActionBatches.begin(), scheduledActionBatches.end(),
+        [&](const BatchActions& batch) { return batch.getIDTag() == idTag; });
 }
+
 
 size_t MasterClock::getIndexForBatch(const BatchActions& batch) const {
     auto it = std::find_if(scheduledActionBatches.begin(), scheduledActionBatches.end(),
@@ -192,30 +154,27 @@ size_t MasterClock::getIndexForBatch(const BatchActions& batch) const {
     return std::numeric_limits<size_t>::max();
 }
 
+void MasterClock::setRuntimeTasks(std::function<void()> taskFunction) {
+    std::string idTag = "RunTimeTasks";
+    Duration divisionDurationAsDuration = fetchDivisionDurationAsDuration();
+    Duration intervalDuration = divisionDurationAsDuration - std::chrono::microseconds(500);
+
+    addItemToBatchAtInterval(taskFunction, intervalDuration, idTag, true);
+}
 
 void MasterClock::addItemToBatchAtInterval(std::function<void()> function, Duration interval, 
     const std::string& idTag, bool isLooping) {
     std::lock_guard<std::mutex> lock(scheduledIntervalsMutex);
-    bool keypadFlag = false;
-
-    // Check if a batch with the same idTag and interval exists
-    std::string pattern = "KP[1-9]";  // Pattern for idTag
-    if (std::regex_match(idTag, std::regex(pattern))) {
-        keypadFlag = true;
+    if (verbose) {
+        printf("   MasterClock::addItemToBatchAtInteval::Entered.\n");
+        printf("   MasterClock::addItemToBatchAtInterval::idTag: %s.\n", idTag.c_str());
     }
 
     if (interval.count() > 0) {
         auto it = idTagToBatchIndex.find(idTag);
-        if (it != idTagToBatchIndex.end()) {
-            if (scheduledActionBatches[it->second].getDuration() == interval) {
-                scheduledActionBatches[it->second].addScheduledAction(ScheduleAction(function));
-                // You might want to update the execution time or loop interval here
-            } else {
-                // Duration mismatch, create a new BatchActions
-                createNewBatchAndAddAction(function, interval, idTag, isLooping);
-            }
+        if (it != idTagToBatchIndex.end() && scheduledActionBatches[it->second].getDuration() == interval) {
+            scheduledActionBatches[it->second].addScheduledAction(ScheduleAction(function));
         } else {
-            // Batch doesn't exist, create a new BatchActions
             createNewBatchAndAddAction(function, interval, idTag, isLooping);
         }
     }
@@ -241,88 +200,40 @@ void MasterClock::createNewBatchAndAddAction(std::function<void()> function, Dur
 
 void MasterClock::executeScheduledBatches() {
     while (!quit.load(std::memory_order_acquire)) {
+        
         startTimer("ScheduleThreadProcess", true);
         TimePoint currentTime = getCurrentTime();
-        TimePoint nextExecutionTime = TimePoint::max();;
-        {
-            std::lock_guard<std::mutex> lock(scheduledIntervalsMutex);
-            timeCorrectionForBuffer += processingDuration;
-            for (auto& batch : scheduledActionBatches) {
-                if (batch.getExecutionTime() <= currentTime) {
-                    if (batch.getIDTag() == "timePointQueue") {
-                        batch.executeBatchWithCorrection(timeCorrectionForBuffer);
-                        timeCorrectionForBuffer = Duration(0);
-                    } else {
-                        batch.executeBatch();
+        TimePoint nextExecutionTime  = TimePoint::max();
+        std::string idTagInUse;
+        for (auto& batch : scheduledActionBatches) {
+            if (batch.getExecutionTime() <= currentTime) {
+                batch.executeBatch();
+                if (batch.getLoopingFlag()) {
+                    if (batch.getIDTag() != "RunTimeTasks") {
+                        idTagInUse = batch.getIDTag();
                     }
-                    if (batch.getLoopingFlag()) {
-                        TimePoint nextExecutionTime = currentTime + batch.getDuration();
-                        batch.setTimePoint(nextExecutionTime);
-                        idTagToBatchIndex[batch.getIDTag()] = getIndexForBatch(batch);
-                    }
+                    TimePoint nextExecutionTime = currentTime + batch.getDuration();
+                    batch.setExecutionTime(nextExecutionTime);
+                    idTagToBatchIndex[batch.getIDTag()] = getIndexForBatch(batch);
+                    
                 }
-                nextExecutionTime = std::min(nextExecutionTime, batch.getExecutionTime());
             }
+            nextExecutionTime = std::min(nextExecutionTime, batch.getExecutionTime());
         }
         startTimer("ScheduleThreadProcess", false);
         processingDuration = getDuration("ScheduleThreadProcess");
-        Duration sleepDuration = std::chrono::duration_cast<Duration>(nextExecutionTime - currentTime - processingDuration);
+        TimePoint sleepTimePoint = nextExecutionTime  - processingDuration;
         std::string sleepDurationLog = "MasterClock::executeScheduledBatches::Duration: " +  std::to_string(std::chrono::duration_cast<
-            std::chrono::microseconds>(sleepDuration).count()) + " (ms)\n";
+            std::chrono::microseconds>(sleepTimePoint - currentTime).count()) + " (microseconds) " + idTagInUse + "\n";
         writeStringToFile(sleepDurationLog);
-        if (sleepDuration > Duration::zero()) {
-            std::this_thread::sleep_for(sleepDuration);
+        if (sleepTimePoint > currentTime) {
+            std::this_thread::sleep_until(sleepTimePoint);
+        }
+        currentDivisionOfBeat += 1;
+        if (currentDivisionOfBeat >= beatDivisions) {
+            currentDivisionOfBeat = 0;
         }
     }
-}
-
-
-// Timer Thread Loop Section
-//###################################################################################################################
-void MasterClock::timerLoop() {
-    if (verbose) {
-        printf("   MasterClock::timerLoop::Entered.\n");
-    }
-    addItemToBatchAtInterval([&]() {
-        this->timePointQueue(this->timeCorrectionForBuffer); // Call the function you want to execute
-    }, divisionDurationAsDuration - std::chrono::microseconds(500), "timePointQueue", true);
-    if (verbose) {
-        printf("   MasterClock::timerLoop::TimePointQueue Scheudled.\n");
-    }
-    executeScheduledBatches();
-}
-// Time Queue Section
-//###################################################################################################################
-void MasterClock::initTimePointQueue() {
-    nextDivisionTime = getCurrentTime();
-    nextDivisionTime += divisionDurationAsDuration + divisionDurationAsDuration;
-    std::lock_guard<std::mutex> lock(divisionTimesMutex);
-    divisionTimes.push_back(nextDivisionTime);
-}
-
-// Update the static function to accept MasterClock& argument and remove the redundant arguments
-void MasterClock::timePointQueue(Duration correctionTime) {
-    std::lock_guard<std::mutex> lock(divisionTimesMutex);
-    bufferUpdated = true;
-    bufferUpdateCV.notify_all();
-    TimePoint lastTimePoint = divisionTimes.back();
-    nextDivisionTime = lastTimePoint + divisionDurationAsDuration - correctionTime;
-    // Add the next beat time to the vector in a FIFO manner
-    if (divisionTimes.size() >= 5) {
-        divisionTimes.erase(divisionTimes.begin()); // Remove the oldest beat if the vector is already full
-    }
-    divisionTimes.push_back(nextDivisionTime);
-    std::string timeCorrectionLog = "MasterClock::timePointQueue::TimeCorrection: "
-        +  std::to_string(std::chrono::duration_cast<
-        std::chrono::microseconds>(correctionTime).count()) + " (microseconds)\n";
-    std::string nextEntryLog = "MasterClock::timePointQueue::NextDivisionTime: " +  
-        std::to_string(std::chrono::duration_cast<
-        std::chrono::microseconds>(nextDivisionTime - getCurrentTime()).count()) + " (microseconds)\n";
-    std::string durationCheck = "MasterClock::timePointQueue::CurrentDivisionTime: " +  
-        std::to_string(std::chrono::duration_cast<
-        std::chrono::microseconds>(divisionTimes[3] - getCurrentTime()).count()) + " (microseconds)\n";
-    std::string logEntry = timeCorrectionLog + durationCheck + nextEntryLog;
-    writeStringToFile(logEntry);
 }
 // Process Timer Section
 //###################################################################################################################

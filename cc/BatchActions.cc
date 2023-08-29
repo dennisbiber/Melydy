@@ -55,7 +55,7 @@ void BatchActions::executeBatch() const {
     }
 }
 
-void BatchActions::setTimePoint(TimePoint newExecutionTime) {
+void BatchActions::setExecutionTime(TimePoint newExecutionTime) {
     executionTime = newExecutionTime;
 }
 

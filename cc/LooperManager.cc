@@ -20,7 +20,6 @@ LooperManager::LooperManager(MasterClock& mc, KeyboardEvent& kb,
 }
 
 LooperManager::~LooperManager() {
-    stopHandlingLooping();
 }
 // Getter/Setter Function SECTION
 // #################################################################################################
@@ -29,92 +28,69 @@ void LooperManager::setRemoveLooper(bool removeState) {
 }
 // Thread Managment SECTION
 // #################################################################################################
-void LooperManager::startHandlingLooping() {
+void LooperManager::scheduleLooperTask() {
     if (verbose) {
-        printf("      LooperManager::startHandlingLooping::Starting Audio Looper Thread.\n");
+        printf("      LooperManager::scheduleLooperTask::Starting Audio Looper Task.\n");
     }
-    audioLooperThread = std::thread(&LooperManager::audioLooperHandler, this);
+    masterClock.setRuntimeTasks([&]() {
+        this->audioLooperTask(); // Call the function you want to execute
+    });
     
-}
-
-void LooperManager::stopHandlingLooping() {
-    if (verbose) {
-        printf("       LooperManager::stopHandlingLooping::Signaling to Stop Audio Looper Thread.\n");
-    }
-    runAudioLooperThread = false;
-
-    if (audioLooperThread.joinable()) {
-        audioLooperThread.join();  // Wait for the thread to finish
-    }
 }
 
 // Audio Looper Section
 //###################################################################################################################
-void LooperManager::audioLooperHandler() {
-    if (verbose) {
-        printf("      LooperManager::audioLooperHandler::Entered.\n");
-    }
-    runAudioLooperThread = true;
-    while (runAudioLooperThread) {
-        std::unique_lock<std::mutex> waitLock(managerThreadMutex);
-        managerThreadCV.wait(waitLock);
-        if (!audioLoopers.empty() && removeLooper) {
-            if (verbose && audioLooperVerbose && superVerbose) {
-                printf("   LooperManager::Audio Manager Thread::Looper Ready.\n");
-            }
-            std::string keypadIDStringToRemove;
-            
-            // Find the keypadIDString that needs to be removed using std::find_if
-            auto foundPair = std::find_if(stringBoolPairs.begin(), stringBoolPairs.end(),
-                [](const auto& pair) {
-                    return *pair.second.first;
-                });
-                
-            if (foundPair != stringBoolPairs.end()) {
-                keypadIDStringToRemove = foundPair->first;
-            }
-            
-            auto it = audioLoopers.begin();
-            while (it != audioLoopers.end()) {
-                if (verbose) {
-                    printf("KEY STRING> %s.\n", keypadIDStringToRemove.c_str());
-                }
-                if (it->second.first == keypadIDStringToRemove) {
-                    if (it->second.second.second->checkIfLooping()) {
-                        it->second.second.second->stopLoop();
-                    }
-                    it = audioLoopers.erase(it);
-                } else {
-                    ++it;
-                }
-            }
-            removeLooper = false;
+void LooperManager::audioLooperTask() {
+    if (!audioLoopers.empty() && removeLooper) {
+        if (verbose) {
+            printf("      LooperManager::audioLooperTask::Entered.\n");
         }
+        std::string keypadIDStringToRemove;
+        
+        // Find the keypadIDString that needs to be removed using std::find_if
+        auto foundPair = std::find_if(stringBoolPairs.begin(), stringBoolPairs.end(),
+            [](const auto& pair) {
+                if (pair.second.first) { // Check if the pointer is valid
+                    return *pair.second.first;
+                }
+                return false;
+            });
+            
+        if (foundPair != stringBoolPairs.end()) {
+            keypadIDStringToRemove = foundPair->first;
+        
+            // Remove all loopers with the specified keypadIDString
+            removeAudioLoopers(keypadIDStringToRemove);
+        }
+        removeLooper = false;
     }
 }
 
-
-bool LooperManager::addAudioLooper(const std::string& keypadIDStr, AudioPlayer* player, double loopDuration, std::string keypadString) {
-    int keypadID = 0;
-    std::lock_guard<std::mutex> lock(audioLoopersMutex);
-    if (!audioLoopers.empty()) {
-        // Find the highest integer key and add 1 to get the new keypadID
-        auto maxEntry = std::max_element(audioLoopers.begin(), audioLoopers.end(),
-            [](const auto& entry1, const auto& entry2) {
-                return entry1.first < entry2.first;
-            });
-
-        keypadID = maxEntry->first + 1;
+void LooperManager::removeAudioLoopers(const std::string& keypadIDStr) {
+    auto range = keypadIDToLoopers.equal_range(keypadIDStr);
+    for (auto it = range.first; it != range.second; ++it) {
+        if (it->second->checkIfLooping()) {
+            masterClock.removeBatchFromQueue(it->second->getIDTag());
+            it->second->stopLoop();
+        }
     }
+    keypadIDToLoopers.erase(range.first, range.second);
+    audioLoopers.erase(keypadIDStr);
+}
+
+bool LooperManager::addAudioLooper(const std::string& keypadIDStr, AudioPlayer* player, double loopDuration) {
     if (verbose && audioLooperVerbose) {
-        printf("      LooperManager::addAudioLooper::Looper ID: %d\n", keypadID);
-        printf("      LooperManager::addAudioLooper::Looper filepath from player: %s\n", player->getFilePath().c_str());
+        printf("      LooperManager::addAudioLooper::Looper ID: %s\n", keypadIDStr.c_str());
         printf("      LooperManager::addAudioLooper::Looper Duration %f.\n", loopDuration);
     }
     try {
-        auto audioLooper = std::make_shared<AudioLooper>(masterClock, player, loopDuration, audioLooperVerbose, keypadString);
-        audioLooper->startLoop();
-        audioLoopers[keypadID] = {keypadIDStr, {false, audioLooper}}; // Set both the integer ID and the AudioLooper pointer
+        auto audioLooper = std::make_shared<AudioLooper>(masterClock, player, loopDuration, audioLooperVerbose, keypadIDStr);
+        std::string idTag = audioLooper->startLoop();
+        
+        // Add the looper to both data structures
+        audioLoopers.emplace(keypadIDStr, AudioLooperInfo{keypadIDStr, audioLooper->checkIfLooping(), audioLooper});
+        keypadIDToLoopers.emplace(keypadIDStr, audioLooper);
+        
         return true;
     } catch (const std::exception& e) {
         // Handle the exception, e.g., print an error message or log the error

@@ -18,8 +18,8 @@ AudioLooper::AudioLooper(MasterClock& mc, AudioPlayer* player, double interval, 
     setIDTag();
     if (verbose) {
         auto millisecondsIntervalDuration = std::chrono::duration_cast<std::chrono::milliseconds>(intervalDuration).count();
-        printf("      AudioLooper:AudioLooper::Interval Duration = %lld ms.\n", millisecondsIntervalDuration);
-        printf("      AudioLooper::AudioLooper::Constructed.\n");
+        printf("         AudioLooper:AudioLooper::Interval Duration = %lld ms.\n", millisecondsIntervalDuration);
+        printf("         AudioLooper::AudioLooper::Constructed.\n");
     }
 }
 
@@ -44,24 +44,28 @@ AudioLooper::~AudioLooper() {
         stopLoop();
     }
     if (verbose) {
-        printf("      AudioLooper::~AudioLooper::Entered.\n");
+        printf("         AudioLooper::~AudioLooper::Entered.\n");
     }
 }
 
 void AudioLooper::fetchBPM() {
     bpm = masterClock.getBPM();
     if (verbose) {
-        printf("      AudioLooper::fetchBPM::Entered.\n");
+        printf("         AudioLooper::fetchBPM::Entered.\n");
     }
 }
 
 void AudioLooper::setIDTag() {
-    idTag = keyID + "_" + std::to_string(masterClock.getCurrentTime().time_since_epoch().count());
+    idTag = keyID + "_" + std::to_string(masterClock.getCurrentDivisonOfBeat());
+}
+
+std::string AudioLooper::getIDTag() {
+    return idTag;
 }
 
 void AudioLooper::stopLoop() {
     if (verbose) {
-        printf("      AudioLooper::stopLoop::Entered.\n");
+        printf("         AudioLooper::stopLoop::Entered.\n");
     }
     isLooping = false;
     if (masterClock.containsBatchActions(idTag)) {
@@ -69,7 +73,7 @@ void AudioLooper::stopLoop() {
         player->stop();
     }
     if (verbose) {
-        printf("      AudioLooper::stopLoop::Finished.\n");
+        printf("         AudioLooper::stopLoop::Finished.\n");
     }
 }
 
@@ -81,18 +85,15 @@ bool AudioLooper::checkIfLooping() {
     return isLooping;
 }
 
-void AudioLooper::startLoop() {
+std::string AudioLooper::startLoop() {
     if (verbose) {
-        printf("      AudioLooper::startLoop::Entered.\n");
+        printf("         AudioLooper::startLoop::Entered.\n");
     }
     isLooping = true;
-    setSchedule();
-}
-
-void AudioLooper::setSchedule() {
     masterClock.addItemToBatchAtInterval([&]() {
         this->player->playAudio(); // Call the function you want to execute
     }, intervalDuration, idTag, true);
+    return idTag;
 }
 // printf("FILEPATH: %s\n", player->getFilePath().c_str());
 // Assuming you have a variable called 'timeToWait' of type std::chrono::high_resolution_clock::duration

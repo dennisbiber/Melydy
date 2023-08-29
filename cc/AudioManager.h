@@ -24,17 +24,15 @@ class AudioManager {
         ~AudioManager();
         bool addAudioPlayer(const char* filepath, NoteConfiguration config);
         bool removeAudioPlayer(SDL_Scancode keycode);
-        AudioPlayer* getAudioPlayer(SDL_Scancode keycode);
-        void audioPlaybackHandler();
-        void startHandlingPlayback();
-        void stopHandlingPlayback();
-
-        void setAudioPlabackThreadStatus(bool statusUpdate);
-
+        void schedulePlayback();
+        void unschedulePlayback();
         void setCurrentFunction(std::string function);
         void setKeypadReady(bool stateUpdate);
 
     private:
+        void audioPlaybackTask();
+        AudioPlayer* getAudioPlayer(SDL_Scancode keycode);
+
         MasterClock& masterClock;
         KeyboardEvent& keyboardEvent;
         LooperManager& looperManager;

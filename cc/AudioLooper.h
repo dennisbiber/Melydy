@@ -24,11 +24,11 @@ public:
     ~AudioLooper();
 
     void fetchBPM();
-    void startLoop();
+    std::string startLoop();
     void stopLoop();
     bool checkIfLooping();
     const std::string& getFilePath() const;
-    void setSchedule();
+    std::string getIDTag();
 
     // Move Assignment Operator
     AudioLooper& operator=(AudioLooper&& other) noexcept;

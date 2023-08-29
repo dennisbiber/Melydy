@@ -40,7 +40,7 @@ public:
     double getBPM() const;
     double getBeatDivisions() const;
     Duration fetchDivisionDurationAsDuration() const;
-    bool getQuitState();
+    int getCurrentDivisonOfBeat();
 
     // Process Timer
     void startTimer(const std::string& processName, bool start);
@@ -50,8 +50,8 @@ public:
     bool isNoteDataEmpty();
     void updateWindwoTimeValues();
     void waitForBufferUpdate();
-
-    void timerLoop();
+    void executeScheduledBatches();
+    void setRuntimeTasks(std::function<void()> taskFunction);
 
     bool containsBatchActions(const std::string& idTag) const;
     void removeBatchFromQueue(const std::string& idTag);
@@ -65,7 +65,6 @@ private:
     void timePointQueue(Duration correctionTime);
     void initTimePointQueue();
     static void setVerboseStatus(bool vb, bool sVb, bool tVb);
-    void executeScheduledBatches();
     void createNewBatchAndAddAction(std::function<void()> function, Duration interval,
         const std::string& idTag, bool isLooping);
     bool searchBatchActions(const std::string& idTag) const;
@@ -81,6 +80,7 @@ private:
     bool bufferUpdated;
     bool isNoteDataReady;
     bool logging;
+    int currentDivisionOfBeat;
     std::string filename;
 
     // declare time units

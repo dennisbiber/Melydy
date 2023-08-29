@@ -39,18 +39,11 @@ AudioManager::AudioManager(bool verbose, bool superVerbose, bool audioPlayerVerb
 }
 
 AudioManager::~AudioManager() {
-    if (runAudioPlaybackThread) {
-        stopHandlingPlayback();
-    }
-
+    unschedulePlayback();
     Mix_CloseAudio();
 }
 // Getter/Setter Function Section
 //###################################################################################################################
-void AudioManager::setAudioPlabackThreadStatus(bool statusUpdate) {
-    runAudioPlaybackThread = statusUpdate;
-}
-
 void AudioManager::setCurrentFunction(std::string function) {
     if (verbose) {
         printf("   AudioManager::setCurrentFunction::Updated: %s.\n", function.c_str());
@@ -66,15 +59,17 @@ void AudioManager::setKeypadReady(bool stateUpdate) {
 }
 // Thread Managment SECTION
 // #################################################################################################
-void AudioManager::startHandlingPlayback() {
+void AudioManager::schedulePlayback() {
     if (verbose) {
-        printf("      AudioManager::startHandlingPlayback::Starting Audio Playback Thread.\n");
+        printf("      AudioManager::startHandlingPlayback::Schedulong Audio Playback Task.\n");
     }
-    audioPlaybackThread = std::thread(&AudioManager::audioPlaybackHandler, this);
+    masterClock.setRuntimeTasks([&]() {
+        this->audioPlaybackTask(); // Call the function you want to execute
+    });
     
 }
 
-void AudioManager::stopHandlingPlayback() {
+void AudioManager::unschedulePlayback() {
     if (verbose) {
         printf("       AudioManager::startHandlingPlayback::Signaling to Stop Audio Playback Thread.\n");
     }
@@ -82,11 +77,7 @@ void AudioManager::stopHandlingPlayback() {
     for (const auto& config : noteConfigurations) {
         removeAudioPlayer(config.keycode); // Clean up each audio player
     }
-    runAudioPlaybackThread = false;
 
-    if (audioPlaybackThread.joinable()) {
-        audioPlaybackThread.join();  // Wait for the thread to finish
-    }
 }
 // Audio Player Section
 //###################################################################################################################
@@ -155,68 +146,61 @@ AudioPlayer* AudioManager::getAudioPlayer(SDL_Scancode keyCode) {
     return nullptr;
 }
 
-void AudioManager::audioPlaybackHandler() {
-    runAudioPlaybackThread = true;
-    while (runAudioPlaybackThread) {
-        if (audioPlayerVerbose && superVerbose) {
-            printf("      AudioManager::audioPlaybackHandler::stringBoolPairs:\n");
-            printf("   addLooper: %s.\n", addLooper ? "true" : "false");
-            for (const auto& pair : stringBoolPairs) {
-                printf("   %s: %s\n", pair.first.c_str(), *(pair.second.first) ? "true" : "false");
+void AudioManager::audioPlaybackTask() {
+    if (audioPlayerVerbose && superVerbose) {
+        printf("      AudioManager::audioPlaybackHandler::stringBoolPairs:\n");
+        printf("   addLooper: %s.\n", addLooper ? "true" : "false");
+        for (const auto& pair : stringBoolPairs) {
+            printf("   %s: %s\n", pair.first.c_str(), *(pair.second.first) ? "true" : "false");
+        }
+    }
+
+    if (!keyboardEvent.isScancodeDataEmpty()) {
+        if (verbose && audioPlayerVerbose) {
+            printf("      AudioManager::audioPlaybackHandler::Keyboard event found.\n");
+        }
+        std::string noteInfoString = "Playing Notes: ";
+        const std::unordered_set<SDL_Scancode>& scancodeData = keyboardEvent.getScancodeData();
+
+        bool activeLooper = false;
+        std::string keypadIDString;
+        double loopDuration = 0.0;
+
+        // Find the active looper (if any) from stringBoolPairs
+        for (const auto& pair : stringBoolPairs) {
+            bool loopState = *(pair.second.first); // Dereference the bool pointer
+            if (loopState) {
+                activeLooper = loopState;
+                keypadIDString = pair.first;
+                loopDuration = pair.second.second;
+                break; // Break after finding the active looper
             }
         }
-        std::unique_lock<std::mutex> lock(managerThreadMutex);
-        managerThreadCV.wait(lock);
-
-        if (!keyboardEvent.isScancodeDataEmpty()) {
-            if (verbose && audioPlayerVerbose) {
-                printf("      AudioManager::audioPlaybackHandler::Keyboard event found.\n");
-            }
-            std::string noteInfoString = "Playing Notes: ";
-            const std::unordered_set<SDL_Scancode>& scancodeData = keyboardEvent.getScancodeData();
-
-            bool activeLooper = false;
-            std::string keypadIDString;
-            double loopDuration = 0.0;
-
-            // Find the active looper (if any) from stringBoolPairs
-            for (const auto& pair : stringBoolPairs) {
-                bool loopState = *(pair.second.first); // Dereference the bool pointer
-                if (loopState) {
-                    activeLooper = loopState;
-                    keypadIDString = pair.first;
-                    loopDuration = pair.second.second;
-                    break; // Break after finding the active looper
-                }
-            }
-            if (verbose && addLooper) {
-                printf("      AudioManager::playAudio::LooperState: %d.\n", activeLooper);
-                printf("      AudioManager::playAudio::Keypad Number: %s.\n", keypadIDString.c_str());
-                printf("      AudioManager::playAudio::Duration: %f.\n", loopDuration);
-            }
-            std::for_each(scancodeData.begin(), scancodeData.end(), [&](const auto& keycode) {
-                AudioPlayer* player = getAudioPlayer(keycode);
-                if (player) {
-                    if (verbose && audioPlayerVerbose) {
-                        printf("      AudioManager::audioPlaybackHandler::Playing the Note: %d\n", keycode);
-                    }
-                    if (activeLooper && addLooper) {
-                        player->playAudio();
-                        looperManager.addAudioLooper(keypadIDString, player, loopDuration, keypadIDString);
-                    } else {
-                        player->playAudio();
-                    }
-                } else {
-                    if (verbose && audioPlayerVerbose) {
-                        printf("      AudioManager::audioPlaybackHandler::Note '%d' not found in the player map.\n", keycode);
-                    }
-                }
-            });
-            keyboardEvent.clearScancodeData();
-            
-            // masterClock.startTimer("PLAYPROCESS", false);
-            // printf("   ---%s", masterClock.getDurationString("PLAYPROCESS").c_str());
-            // // window->provideNoteInfo(noteInfoString);
+        if (verbose && addLooper) {
+            printf("      AudioManager::playAudio::LooperState: %d.\n", activeLooper);
+            printf("      AudioManager::playAudio::Keypad Number: %s.\n", keypadIDString.c_str());
+            printf("      AudioManager::playAudio::Duration: %f.\n", loopDuration);
         }
+        std::for_each(scancodeData.begin(), scancodeData.end(), [&](const auto& keycode) {
+            AudioPlayer* player = getAudioPlayer(keycode);
+            if (player) {
+                player->playAudio();
+                if (activeLooper && addLooper) {
+                    bool success = looperManager.addAudioLooper(keypadIDString, player, loopDuration);
+                    if (verbose) {
+                        printf("   AudioManager::audioPlaybackTask::addLooper success: %d.\n", success);
+                    }
+                }
+            } else {
+                if (verbose && audioPlayerVerbose) {
+                    printf("      AudioManager::audioPlaybackHandler::Note '%d' not found in the player map.\n", keycode);
+                }
+            }
+        });
+        keyboardEvent.clearScancodeData();
+        
+        // masterClock.startTimer("PLAYPROCESS", false);
+        // printf("   ---%s", masterClock.getDurationString("PLAYPROCESS").c_str());
+        // // window->provideNoteInfo(noteInfoString);
     }
 }

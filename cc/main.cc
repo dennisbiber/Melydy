@@ -234,11 +234,11 @@ int main(int argc, char* argv[]) {
     }
     std::thread mainThread([&]() {
         try {
-            manager->busyWaitHack();
+            masterClock.executeScheduledBatches();
         } catch (const std::exception& e) {
-            std::cerr << "An exception occurred while running the manager: " << e.what() << std::endl;
+            std::cerr << "An exception occurred while running the MasterCLock: " << e.what() << std::endl;
         } catch (...) {
-            std::cerr << "An unknown exception occurred while running the manager." << std::endl;
+            std::cerr << "An unknown exception occurred while running the MasterClock." << std::endl;
         }
     });
     

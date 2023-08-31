@@ -161,7 +161,7 @@ size_t MasterClock::getIndexForBatch(const BatchActions& batch) const {
 void MasterClock::setRuntimeTasks(std::function<void()> taskFunction) {
     std::string idTag = "RunTimeTasks";
     Duration divisionDurationAsDuration = fetchDivisionDurationAsDuration();
-    Duration intervalDuration = divisionDurationAsDuration - std::chrono::microseconds(500);
+    Duration intervalDuration = divisionDurationAsDuration;
 
     addItemToBatchAtInterval(taskFunction, intervalDuration, idTag, true);
 }

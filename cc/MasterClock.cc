@@ -31,6 +31,10 @@ MasterClock::MasterClock(double bpm, double beatDivisions, bool vb, bool sVb, bo
     setVerboseStatus(vb, sVb, timeVerbose);
     this->setBPM(bpm);
     this->beatDivisions = beatDivisions;
+    std::string logMessage = "MasterClock::MasterClock::Setup:\n";
+    logMessage += "  BPM: " + std::to_string(bpm) + ",\n";
+    logMessage += "  Divisions: " + std::to_string(beatDivisions) + "\n";
+    writeStringToFile(logMessage);
     if (verbose) {
         printf("   MasterClock::masterClock::Constructred\n");
     }
@@ -209,9 +213,7 @@ void MasterClock::executeScheduledBatches() {
             if (batch.getExecutionTime() <= currentTime) {
                 batch.executeBatch();
                 if (batch.getLoopingFlag()) {
-                    if (batch.getIDTag() != "RunTimeTasks") {
-                        idTagInUse = batch.getIDTag();
-                    }
+                    idTagInUse = batch.getIDTag();
                     TimePoint nextExecutionTime = currentTime + batch.getDuration();
                     batch.setExecutionTime(nextExecutionTime);
                     idTagToBatchIndex[batch.getIDTag()] = getIndexForBatch(batch);
@@ -223,8 +225,11 @@ void MasterClock::executeScheduledBatches() {
         startTimer("ScheduleThreadProcess", false);
         processingDuration = getDuration("ScheduleThreadProcess");
         TimePoint sleepTimePoint = nextExecutionTime  - processingDuration;
+        std::string processingDurationLog = "MasterClock::executeScheduledBatches::Duration: " +  std::to_string(std::chrono::duration_cast<
+            std::chrono::microseconds>(processingDuration).count()) + " (microseconds) " + "PD_time" + "\n";
         std::string sleepDurationLog = "MasterClock::executeScheduledBatches::Duration: " +  std::to_string(std::chrono::duration_cast<
             std::chrono::microseconds>(sleepTimePoint - currentTime).count()) + " (microseconds) " + idTagInUse + "\n";
+        writeStringToFile(processingDurationLog);
         writeStringToFile(sleepDurationLog);
         if (sleepTimePoint > currentTime) {
             std::this_thread::sleep_until(sleepTimePoint);

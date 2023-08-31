@@ -3,7 +3,7 @@
 # Function to compile individual source files
 compile_source() {
     echo "Oi! Compilin' $1, in'it..."
-    if ! g++ -O2 -g -c "$1" -I/usr/include/soundtouch -I. -o ${1%.cc}.o -lSDL2 -lsndfile -lfftw -pg -lstdc++fs -lasound -lm; then
+    if ! g++ -O3 -g -c "$1" -I/usr/include/soundtouch -I. -o ${1%.cc}.o -lSDL2 -lsndfile -lfftw -pg -lstdc++fs -lasound -lm; then
         echo "Blimey! Compilin' $1 failed, it did!"
         exit 1
     fi

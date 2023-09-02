@@ -1,5 +1,8 @@
 # Melydy
 Drum Pad/Live Looper/Sequencer/Recording system/Synthesizer
+Melyda is an open-source project with the end goal of providing a free solution for drum pad/Live Looper/AudioVisual Synthesis. The goal is also to have
+this at production quality to integrate into any stage setup for live performance. 
+
 Packages Need For Program:
 ```
 libsdl2-dev

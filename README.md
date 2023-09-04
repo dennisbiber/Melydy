@@ -22,7 +22,7 @@ In the python directory, there are analytical scripts. There are two files:
 
 The `looperDurationChecker.py` takes 2 arguments:
 ```
--t, --type: options include: ["kp": Keypad Progression, "pp": Program Progression (main cycle rate), "pd": Program time correciton durations
+-t, --type: options include: "kp": Keypad Progression, "pp": Program Progression (main cycle rate), "pd": Program time correciton durations
 -f, --file: the filepath of the program log
 ```
 
@@ -70,27 +70,30 @@ kp9LoopDuration: 1.0
 
 # Part 4
 ```
-verbose: false # sets all verbose true except super
-timeVerbose: true
-superVerbose: true
-mainVerbose: false
-masterClockVerbose: false
-keyboardEventVerbose: false
-# Management
-managerVerbose: true
-# false
-looperManagerVerbose: false
-audioLooperVerbose: false
-graphicLooperVerbose: false
-# Process
-# Graphic
-graphicManagerVerbose: false
-graphicProcessorVerbose: false
-graphicPlayerVerbose: false
-# Audio
-audioManagerVerbose: false
-audioProcessorVerbose: false
-audioPlayerVerbose: false
+verbosity:
+  timeVerbose: true
+  superVerbose: true
+  mainVerbose: false
+  masterClockVerbose: false
+  keyboardEventVerbose: false
+  # Management
+  managerVerbose: true
+  # false
+  looperVerbosity:
+    looperManagerVerbose: false
+    audioLooperVerbose: false
+    graphicLooperVerbose: false
+  # Process
+  # Graphic
+  graphicVerbosity:
+    graphicManagerVerbose: false
+    graphicProcessorVerbose: false
+    graphicPlayerVerbose: false
+  # Audio
+  audioVerbosity:
+    audioManagerVerbose: false
+    audioProcessorVerbose: false
+    audioPlayerVerbose: false
 ```
 
 # Part 5

@@ -29,7 +29,6 @@ kp7LoopDuration: 2.0
 kp8LoopDuration: 1.0
 kp9LoopDuration: 1.0
 verbosity:
-  verbose: false
   timeVerbose: true
   superVerbose: true
   mainVerbose: false

@@ -4,6 +4,9 @@
 
 AudioProcessor::AudioProcessor(bool verbose) :
     verbose(verbose) {
+    if (verbose) {
+        printf("      AudioProcessor::AudioProcessor::Entered.\n");
+    }
 }
 
 AudioProcessor::~AudioProcessor() {

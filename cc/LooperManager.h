@@ -32,12 +32,10 @@ class LooperManager {
         MasterClock& masterClock;
         KeyboardEvent& keyboardEvent;
 
-        const YAML::Node& verbosity;
         bool verbose; 
         bool superVerbose;
         bool timeVerbose;
         bool audioLooperVerbose;
-        bool graphicLooperVerbose;
         bool addLooper;
         bool removeLooper;
         bool runAudioLooperThread;

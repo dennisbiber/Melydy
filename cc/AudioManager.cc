@@ -3,16 +3,20 @@
 #include <cstdio>
 #include <cmath>
 
-AudioManager::AudioManager(const YAML::Node& audioVerbosity, bool superVerbose,
-    MasterClock& mc, KeyboardEvent& kb, LooperManager& lm,
-    const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs, const YAML::Node& audioMixerConfig) :
-    verbosity(audioVerbosity),
-    verbose(verbosity["audioManagerVerbose"].as<bool>()), superVerbose(superVerbose),
+AudioManager::AudioManager(MasterClock& mc, KeyboardEvent& kb, LooperManager& lm,
+    const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs,
+    const YAML::Node& audioVerbosity, const YAML::Node& audioMixerConfig, bool sV) :
+    verbose(audioVerbosity["audioManagerVerbose"].as<bool>()), superVerbose(sV),
+    audioProcessor(audioVerbosity["audioProcessorVerbose"].as<bool>()),
     masterClock(mc), keyboardEvent(kb), looperManager(lm),
     bpm(mc.getBPM()), beatDivisions(mc.getBeatDivisions()), 
     beatDurationAsDuration(mc.fetchDivisionDurationAsDuration()),
-    audioProcessor(verbosity["audioProcessorVerbose"].as<bool>()), stringBoolPairs(stringBoolPairs),
-    runAudioPlaybackThread(false), addLooper(false) {
+    stringBoolPairs(stringBoolPairs),
+    runAudioPlaybackThread(false), addLooper(false),
+    audioPlayerVerbose(audioVerbosity["audioPlayerVerbose"].as<bool>()) {
+    if (verbose) {
+        printf("   AudioManager::AudioManager::Entered.\n");
+    }
     // Initialize SDL_mixer
     int mixerSampleRate = audioMixerConfig["mixer_sample_rate"].as<int>();
     int mixerChannels = audioMixerConfig["mixer_channels"].as<int>();
@@ -89,7 +93,7 @@ bool AudioManager::addAudioPlayer(const char* filepath, NoteConfiguration config
         std::string noteName = config.noteName;
 
         // Create and manage AudioPlayer instance using unique_ptr
-        AudioPlayer* player = new AudioPlayer(verbosity["audioPlayerVerbose"].as<bool>(), filepath, audioProcessor);
+        AudioPlayer* player = new AudioPlayer(audioPlayerVerbose, filepath, audioProcessor);
 
         // Lock the playerMapMutex to safely modify playerMap
         {

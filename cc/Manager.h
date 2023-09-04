@@ -23,10 +23,11 @@ typedef float Sample;
 class Manager {
     public:
         Manager(MasterClock& mc,
-            const YAML::Node& verbosity,
             const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs,
+            const YAML::Node& verbosity,
             const YAML::Node& notesConfig, const YAML::Node& windowConfig,
-            const YAML::Node& audioMixerConfig);
+            const YAML::Node& audioMixerConfig,
+            bool sV, bool tV);
         ~Manager();
 
         void joinManagerThread();
@@ -34,31 +35,29 @@ class Manager {
         void setFunction();
         
     private:
+        // functions
+        void setNotesConfig();
         void scheduleupdateStates();
         void scheduleAudioLooperTask();
         void scheduleAudioPlaybackTask();
         void startKeyboardThread();
         void startAnimationThread();
+
+        // Objects
         MasterClock& masterClock;
         KeyboardEvent keyboardEvent;
         LooperManager looperManager;
-        AudioManager audioManager;
         GraphicManager graphicManager;
-
-        // functions
-        void setNotesConfig();
+        AudioManager audioManager;
 
         // variables
-        const YAML::Node& verbosity;
         bool verbose;
         bool superVerbose;
         bool timeVerbose;
         int mixerBufferSize;
         std::string currentFunction;
-        std::mutex managerThreadMutex;
-        std::condition_variable managerThreadCV;
-        void audioPlaybackHandler();
         
+        // Structures
         const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs;
         const YAML::Node& notesConfig;
 };

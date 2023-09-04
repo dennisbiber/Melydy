@@ -16,10 +16,10 @@ using Duration = std::chrono::high_resolution_clock::duration;
 
 class AudioManager {
     public:
-        AudioManager(const YAML::Node& audioVerbosity, bool superVerbose,
-            MasterClock& mc, KeyboardEvent& kb, LooperManager& lm,
+        AudioManager(MasterClock& mc, KeyboardEvent& kb, LooperManager& lm,
             const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs,
-            const YAML::Node& audioMixerConfig);
+            const YAML::Node& audioVerbosity, const YAML::Node& audioMixerConfig,
+            bool sV);
         ~AudioManager();
         bool addAudioPlayer(const char* filepath, NoteConfiguration config);
         bool removeAudioPlayer(SDL_Scancode keycode);
@@ -29,21 +29,22 @@ class AudioManager {
         void setKeypadReady(bool stateUpdate);
 
     private:
+        // FUNCTIONS
         void audioPlaybackTask();
         AudioPlayer* getAudioPlayer(SDL_Scancode keycode);
 
+        // OBJECTS
         MasterClock& masterClock;
         KeyboardEvent& keyboardEvent;
         LooperManager& looperManager;
         AudioProcessor audioProcessor;
         AudioPlayerMapThreadings audioPlayermapThreadings;
 
-        const YAML::Node& verbosity;
+        // VARIABLES
+        bool audioPlayerVerbose;
         std::unordered_map<std::string, std::pair<std::string, AudioPlayer*>> playerMap;
         const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs;
         std::vector<NoteConfiguration> noteConfigurations;
-        std::shared_ptr<ManagerThreadings> sharedManagerThreadings;
-        std::atomic<bool> stopFlag = ATOMIC_VAR_INIT(false);
         bool verbose;
         bool superVerbose;
         bool runAudioPlaybackThread;

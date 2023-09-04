@@ -18,7 +18,6 @@ window:
   p2Height: 400
   noteWidth: 200
   noteHeight: 400
-noteInfoSpeed: 20
 kp1LoopDuration: 16.0 #4 bars
 kp2LoopDuration: 8.0 #2 bars
 kp3LoopDuration: 8.0 #4 beats
@@ -36,18 +35,14 @@ verbosity:
   keyboardEventVerbose: false
   # Management
   managerVerbose: true
-  # false
   looperVerbosity:
     looperManagerVerbose: false
     audioLooperVerbose: false
     graphicLooperVerbose: false
-  # Process
-  # Graphic
   graphicVerbosity:
     graphicManagerVerbose: false
     graphicProcessorVerbose: false
     graphicPlayerVerbose: false
-  # Audio
   audioVerbosity:
     audioManagerVerbose: false
     audioProcessorVerbose: false

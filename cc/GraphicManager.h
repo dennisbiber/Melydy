@@ -18,7 +18,6 @@ class GraphicManager {
         void stopAnimationWindow();
 
     private:
-        const YAML::Node& verbosity;
         GraphicProcessor graphicProcessor;
         GraphicPlayer graphicPlayer;
         MasterClock& masterClock;

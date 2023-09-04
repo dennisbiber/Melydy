@@ -4,12 +4,14 @@
 
 GraphicManager::GraphicManager(const YAML::Node& graphicVerbosity, bool superVerbose, bool timeVerbose,
     MasterClock& mc, const YAML::Node& windowConfig) :
-    verbosity(graphicVerbosity),
-    verbose(verbosity["graphicManagerVerbose"].as<bool>()),
+    verbose(graphicVerbosity["graphicManagerVerbose"].as<bool>()),
     superVerbose(superVerbose), timeVerbose(timeVerbose), 
-    graphicProcessor(verbosity["graphicProcessorVerbose"].as<bool>()), 
-    graphicPlayer(windowConfig, verbosity["graphicPlayerVerbose"].as<bool>(), superVerbose, timeVerbose),
+    graphicProcessor(graphicVerbosity["graphicProcessorVerbose"].as<bool>()), 
+    graphicPlayer(windowConfig, graphicVerbosity["graphicPlayerVerbose"].as<bool>(), superVerbose, timeVerbose),
     masterClock(mc) {
+    if (verbose) {
+        printf("   GraphicManager::GraphicManager::Entered.\n");
+    }
 }
 
 GraphicManager::~GraphicManager() {

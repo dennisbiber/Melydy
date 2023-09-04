@@ -7,22 +7,21 @@
 #include <unordered_set>
 
 Manager::Manager(MasterClock& mc,
-    const YAML::Node& verbosity,
     const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs,
+    const YAML::Node& verbosity,
     const YAML::Node& notesConfig, const YAML::Node& windowConfig,
-    const YAML::Node& audioMixerConfig) :
-    masterClock(mc), verbosity(verbosity), currentFunction("FN10"),
-    verbose(verbosity["managerVerbose"].as<bool>()), 
-    superVerbose(verbosity["superVerbose"].as<bool>()), 
-    timeVerbose(verbosity["timeVerbose"].as<bool>()),
+    const YAML::Node& audioMixerConfig,
+    bool sV, bool tV) :
+    masterClock(mc), currentFunction("FN10"),
+    verbose(verbosity["managerVerbose"].as<bool>()),
     stringBoolPairs(stringBoolPairs), notesConfig(notesConfig),
-    keyboardEvent(masterClock, verbosity["keyboardEventVerbose"].as<bool>(), timeVerbose, superVerbose),
+    keyboardEvent(masterClock, verbosity["keyboardEventVerbose"].as<bool>(), tV, sV),
     looperManager(masterClock, keyboardEvent, stringBoolPairs,
-        verbosity["looperVerbosity"], superVerbose, timeVerbose),
-    audioManager(verbosity["audioVerbosity"], superVerbose, 
-        masterClock, keyboardEvent, looperManager, stringBoolPairs, audioMixerConfig), 
-    graphicManager(verbosity["graphicVerbosity"], superVerbose, timeVerbose,
-         masterClock, windowConfig) {
+        verbosity["looperVerbosity"], sV, tV),
+    graphicManager(verbosity["graphicVerbosity"], sV, tV,
+         masterClock, windowConfig),
+    audioManager(masterClock, keyboardEvent, looperManager,
+        stringBoolPairs, verbosity["audioVerbosity"], audioMixerConfig, sV) {
     if (verbose) {
         printf("   Manager::Constructor Entered.\n");
     }

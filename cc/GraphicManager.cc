@@ -2,17 +2,14 @@
 #include <cstdio>
 #include <cmath>
 
-GraphicManager::GraphicManager(bool verbose, bool superVerbose, bool graphicPlayerVerbose, 
-    bool graphicProcessorVerbose, bool timeVerbose,
-    MasterClock& mc, const YAML::Node& windowConfig,
-    std::condition_variable& managerThreadCV, std::mutex& managerThreadMutex) : 
-    verbose(verbose), graphicPlayerVerbose(graphicPlayerVerbose),
+GraphicManager::GraphicManager(const YAML::Node& graphicVerbosity, bool superVerbose, bool timeVerbose,
+    MasterClock& mc, const YAML::Node& windowConfig) :
+    verbosity(graphicVerbosity),
+    verbose(verbosity["graphicManagerVerbose"].as<bool>()),
     superVerbose(superVerbose), timeVerbose(timeVerbose), 
-    graphicProcessorVerbose(graphicProcessorVerbose), 
-    graphicProcessor(graphicProcessorVerbose), 
-    graphicPlayer(windowConfig, graphicPlayerVerbose, superVerbose, timeVerbose),
-    masterClock(mc), managerThreadCV(managerThreadCV),
-    managerThreadMutex(managerThreadMutex) {
+    graphicProcessor(verbosity["graphicProcessorVerbose"].as<bool>()), 
+    graphicPlayer(windowConfig, verbosity["graphicPlayerVerbose"].as<bool>(), superVerbose, timeVerbose),
+    masterClock(mc) {
 }
 
 GraphicManager::~GraphicManager() {

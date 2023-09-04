@@ -16,11 +16,10 @@ using Duration = std::chrono::high_resolution_clock::duration;
 
 class AudioManager {
     public:
-        AudioManager(bool verbose, bool superVerbose, bool audioPlayerVerbose, bool audioProcessorVerbose, 
+        AudioManager(const YAML::Node& audioVerbosity, bool superVerbose,
             MasterClock& mc, KeyboardEvent& kb, LooperManager& lm,
             const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs,
-            const YAML::Node& audioMixerConfig,
-            std::condition_variable& managerThreadCV, std::mutex& managerThreadMutex);
+            const YAML::Node& audioMixerConfig);
         ~AudioManager();
         bool addAudioPlayer(const char* filepath, NoteConfiguration config);
         bool removeAudioPlayer(SDL_Scancode keycode);
@@ -39,6 +38,7 @@ class AudioManager {
         AudioProcessor audioProcessor;
         AudioPlayerMapThreadings audioPlayermapThreadings;
 
+        const YAML::Node& verbosity;
         std::unordered_map<std::string, std::pair<std::string, AudioPlayer*>> playerMap;
         const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs;
         std::vector<NoteConfiguration> noteConfigurations;
@@ -46,8 +46,6 @@ class AudioManager {
         std::atomic<bool> stopFlag = ATOMIC_VAR_INIT(false);
         bool verbose;
         bool superVerbose;
-        bool audioPlayerVerbose;
-        bool audioProcessorVerbose;
         bool runAudioPlaybackThread;
         bool addLooper;
         double bpm;
@@ -55,9 +53,6 @@ class AudioManager {
         double beatDivisions;
         std::string currentFunction;
         std::thread audioPlaybackThread;
-        std::mutex noteConfigurationsMutex;
-        std::condition_variable& managerThreadCV;
-        std::mutex& managerThreadMutex;
         std::mutex playerMapMutex;
 };
 

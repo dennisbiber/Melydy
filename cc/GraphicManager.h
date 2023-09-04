@@ -11,26 +11,21 @@ typedef float Sample;
 
 class GraphicManager {
     public:
-        GraphicManager(bool verbose, bool superVerbose, bool graphicPlayerVerbose, 
-            bool graphicProcessorVerbose, bool timeVerbose,
-            MasterClock& mc, const YAML::Node& windowConfig,
-            std::condition_variable& managerThreadCV, std::mutex& managerThreadMutex);
+        GraphicManager(const YAML::Node& graphicVerbosity, bool superVerbose, bool timeVerbose,
+            MasterClock& mc, const YAML::Node& windowConfig);
         ~GraphicManager();
         void startAnimationWindow();
         void stopAnimationWindow();
 
     private:
+        const YAML::Node& verbosity;
         GraphicProcessor graphicProcessor;
         GraphicPlayer graphicPlayer;
         MasterClock& masterClock;
         bool verbose;
         bool superVerbose;
         bool timeVerbose;
-        bool graphicPlayerVerbose;
-        bool graphicProcessorVerbose;
         std::thread windowThread;
-        std::condition_variable& managerThreadCV;
-        std::mutex& managerThreadMutex;
 };
 
 #endif // AUDIO_MANAGER_H

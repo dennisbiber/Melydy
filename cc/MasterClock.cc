@@ -32,7 +32,7 @@ MasterClock::MasterClock(double bpm, double beatDivisions, bool vb, bool sVb, bo
     this->setBPM(bpm);
     this->beatDivisions = beatDivisions;
     std::string logMessage = "MasterClock::MasterClock::Setup:\n";
-    logMessage += "  BPM: " + std::to_string(bpm) + ",\n";
+    logMessage += "  BPM: " + std::to_string(bpm) + "\n";
     logMessage += "  Divisions: " + std::to_string(beatDivisions) + "\n";
     writeStringToFile(logMessage);
     if (verbose) {

@@ -9,22 +9,24 @@ def process_data(data, analysisType):
 
     total_time = 0
     totals = []
+    headerKeys = ["BPM:", "Divisions:"]
 
     for line in lines:
         parts = line.split()
-        duration = int(parts[1])
-        if analysisType == "kp":
-            if "KP" in parts[-1]:
-                totals.append(total_time)
-                total_time = duration
-            else:
-                total_time += duration
-        elif analysisType == "pp":
-            if "RunTimeTasks" in parts[-1]:
-                totals.append(duration)
-        elif analysisType == "pd":
-            if "PD_time" in parts[-1]:
-                totals.append(duration)
+        if len(parts) > 1 and parts[0] not in headerKeys:
+            duration = int(parts[1])
+            if analysisType == "kp":
+                if "KP" in parts[-1]:
+                    totals.append(total_time)
+                    total_time = duration
+                else:
+                    total_time += duration
+            elif analysisType == "pp":
+                if "RunTimeTasks" in parts[-1]:
+                    totals.append(duration)
+            elif analysisType == "pd":
+                if "PD_time" in parts[-1]:
+                    totals.append(duration)
 
     # Add the last total if there's one remaining
     if analysisType == "kp":

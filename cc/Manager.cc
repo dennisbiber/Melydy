@@ -7,43 +7,27 @@
 #include <unordered_set>
 
 Manager::Manager(MasterClock& mc,
-    bool verbose, bool superVerbose, bool timeVerbose,
-    bool looperManagerVerbose, bool audioLooperVerbose, bool graphicLooperVerbose,
-    bool graphicManagerVerbose, bool graphicPlayerVerbose, bool graphicProcessorVerbose,
-    bool audioManagerVerbose, bool audioPlayerVerbose, bool audioProcessorVerbose,
-    bool keyboardEventVerbose, 
+    const YAML::Node& verbosity,
     const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs,
     const YAML::Node& notesConfig, const YAML::Node& windowConfig,
     const YAML::Node& audioMixerConfig) :
-    masterClock(mc),
-    looperManagerVerbose(looperManagerVerbose),
-    audioLooperVerbose(audioLooperVerbose), graphicLooperVerbose(graphicLooperVerbose),
-    audioManagerVerbose(audioManagerVerbose), graphicManagerVerbose(graphicManagerVerbose),
-    audioPlayerVerbose(audioPlayerVerbose), audioProcessorVerbose(audioProcessorVerbose),
-    graphicPlayerVerbose(graphicPlayerVerbose), graphicProcessorVerbose(graphicProcessorVerbose),
-    currentFunction("FN10"),
-    verbose(verbose), superVerbose(superVerbose), timeVerbose(timeVerbose),
+    masterClock(mc), verbosity(verbosity), currentFunction("FN10"),
+    verbose(verbosity["managerVerbose"].as<bool>()), 
+    superVerbose(verbosity["superVerbose"].as<bool>()), 
+    timeVerbose(verbosity["timeVerbose"].as<bool>()),
     stringBoolPairs(stringBoolPairs), notesConfig(notesConfig),
-    keyboardEvent(masterClock, keyboardEventVerbose, timeVerbose, superVerbose),
+    keyboardEvent(masterClock, verbosity["keyboardEventVerbose"].as<bool>(), timeVerbose, superVerbose),
     looperManager(masterClock, keyboardEvent, stringBoolPairs,
-        looperManagerVerbose, superVerbose, timeVerbose, audioLooperVerbose, graphicLooperVerbose,
-        managerThreadCV, managerThreadMutex),
-    audioManager(audioManagerVerbose, superVerbose, audioPlayerVerbose, audioProcessorVerbose, 
-        masterClock, keyboardEvent, looperManager, stringBoolPairs, audioMixerConfig, 
-        managerThreadCV, managerThreadMutex), 
-    graphicManager(graphicManagerVerbose, superVerbose, graphicPlayerVerbose, graphicProcessorVerbose, timeVerbose,
-         masterClock, windowConfig, managerThreadCV, managerThreadMutex) {
+        verbosity["looperVerbosity"], superVerbose, timeVerbose),
+    audioManager(verbosity["audioVerbosity"], superVerbose, 
+        masterClock, keyboardEvent, looperManager, stringBoolPairs, audioMixerConfig), 
+    graphicManager(verbosity["graphicVerbosity"], superVerbose, timeVerbose,
+         masterClock, windowConfig) {
     if (verbose) {
         printf("   Manager::Constructor Entered.\n");
     }
     setNotesConfig();
-    if (verbose) {
-        printf("   Manager::BPM and NotesConfig set.\n");
-    }
     mixerBufferSize = audioMixerConfig["mixer_buffer_size"].as<int>();
-    if (verbose) {
-        printf("   Manager::Audio Information set.\n");
-    }
     scheduleAudioLooperTask();
     scheduleAudioPlaybackTask();
     startKeyboardThread();

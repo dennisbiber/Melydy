@@ -1,11 +1,11 @@
 audioMixer:
-  mixer_buffer_size: 2048
+  mixer_buffer_size: 4048
   mixer_sample_rate: 48000
   mixer_channels: 8
   audio_format: 2 # 1 = WSL, 2 = PI
-bpm: 130.0
+bpm: 120.0
 num_samples: 200
-beatDivisions: 4.0
+beatDivisions: 2.0
 APM_notedata_retrieve_delay: 0
 window:
   font: "/home/dbiber/FreeSans.ttf"
@@ -19,36 +19,40 @@ window:
   noteWidth: 200
   noteHeight: 400
 noteInfoSpeed: 20
-kp1LoopDuration: 10.0 #4 bars
+kp1LoopDuration: 16.0 #4 bars
 kp2LoopDuration: 8.0 #2 bars
-kp3LoopDuration: 6.0 #4 beats
+kp3LoopDuration: 8.0 #4 beats
 kp4LoopDuration: 4.0 #2 beats
-kp5LoopDuration: 3.0
-kp6LoopDuration: 2.5
+kp5LoopDuration: 4.0
+kp6LoopDuration: 2.0
 kp7LoopDuration: 2.0
-kp8LoopDuration: 1.5
+kp8LoopDuration: 1.0
 kp9LoopDuration: 1.0
-verbose: false
-timeVerbose: true
-superVerbose: true
-mainVerbose: false
-masterClockVerbose: false
-keyboardEventVerbose: false
-# Management
-managerVerbose: true
-# false
-looperManagerVerbose: false
-audioLooperVerbose: false
-graphicLooperVerbose: false
-# Process
-# Graphic
-graphicManagerVerbose: false
-graphicProcessorVerbose: false
-graphicPlayerVerbose: false
-# Audio
-audioManagerVerbose: false
-audioProcessorVerbose: false
-audioPlayerVerbose: false
+verbosity:
+  verbose: false
+  timeVerbose: true
+  superVerbose: true
+  mainVerbose: false
+  masterClockVerbose: false
+  keyboardEventVerbose: false
+  # Management
+  managerVerbose: true
+  # false
+  looperVerbosity:
+    looperManagerVerbose: false
+    audioLooperVerbose: false
+    graphicLooperVerbose: false
+  # Process
+  # Graphic
+  graphicVerbosity:
+    graphicManagerVerbose: false
+    graphicProcessorVerbose: false
+    graphicPlayerVerbose: false
+  # Audio
+  audioVerbosity:
+    audioManagerVerbose: false
+    audioProcessorVerbose: false
+    audioPlayerVerbose: false
 notes:
   fn08A#4:
     filepath: "/home/dbiber/soundSamples/2023-08-08/chromatic/acidBassPluck1/acidBassPluck1_A#4.wav"
@@ -873,25 +877,354 @@ notes:
   Hat1:
     filepath: "/home/dbiber/soundSamples/2023-08-08/closedHat1-C5.wav"
     fnNumber: "fn12"
-    keycode: 77 # end
+    keycode: 224 # Left ctrl
   Hat2:
     filepath: "/home/dbiber/soundSamples/2023-08-08/closedHat1-D5.wav"
     fnNumber: "fn12"
-    keycode: 74 # home
+    keycode: 226 # Left alt
   Clap1:
     filepath: "/home/dbiber/soundSamples/2023-08-08/single_clap1-C5.wav"
     fnNumber: "fn12"
-    keycode: 75 # page up
+    keycode: 230 # right alt
   Snare1:
     filepath: "/home/dbiber/soundSamples/2023-08-08/single_snare1-c5.wav"
     fnNumber: "fn12"
-    keycode: 78 # page down
+    keycode: 228 # right ctrl
   Kick1:
-    filepath: "/home/dbiber/soundSamples/drumPad/SingleKick1-C5.wav"
+    filepath: "/home/dbiber/soundSamples/drumPad/SingleKick3_C5.wav"
     fnNumber: "fn12"
-    keycode: 73 # insert
+    keycode: 44 # space
   Kick2:
     filepath: "/home/dbiber/soundSamples/drumPad/SingleKick_A5.wav"
     fnNumber: "fn12"
     keycode: 76 # delete
+    fn07A#4:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_A#4.wav"
+    fnNumber: "fn07"
+    keycode: 13
+  fn07A#5:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_A#5.wav"
+    fnNumber: "fn07"
+    keycode: 36
+  fn07A4:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_A4.wav"
+    fnNumber: "fn07"
+    keycode: 17
+  fn07A5:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_A5.wav"
+    fnNumber: "fn07"
+    keycode: 28
+  fn07A6:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_A6.wav"
+    fnNumber: "fn07"
+    keycode: 49
+  fn07B4:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_B4.wav"
+    fnNumber: "fn07"
+    keycode: 16
+  fn07B5:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_B5.wav"
+    fnNumber: "fn07"
+    keycode: 24
+  fn07C#4:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_C#4.wav"
+    fnNumber: "fn07"
+    keycode: 22
+  fn07C#5:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_C#5.wav"
+    fnNumber: "fn07"
+    keycode: 15
+  fn07C#5D:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_C#5.wav"
+    fnNumber: "fn07"
+    keycode: 31
+  fn07C#6:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_C#6.wav"
+    fnNumber: "fn07"
+    keycode: 38
+  fn07C4:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_C4.wav"
+    fnNumber: "fn07"
+    keycode: 29
+  fn07C5:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_C5.wav"
+    fnNumber: "fn07"
+    keycode: 54
+  fn07C5D:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_C5.wav"
+    fnNumber: "fn07"
+    keycode: 20
+  fn07C6:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_C6.wav"
+    fnNumber: "fn07"
+    keycode: 12
+  fn07D#4:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_D#4.wav"
+    fnNumber: "fn07"
+    keycode: 7
+  fn07D#5:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_D#5.wav"
+    fnNumber: "fn07"
+    keycode: 51
+  fn07D#5D:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_D#5.wav"
+    fnNumber: "fn07"
+    keycode: 32
+  fn07D#6:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_D#6.wav"
+    fnNumber: "fn07"
+    keycode: 39
+  fn07D4:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_D4.wav"
+    fnNumber: "fn07"
+    keycode: 27
+  fn07D5:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_D5.wav"
+    fnNumber: "fn07"
+    keycode: 55
+  fn07D5D:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_D5.wav"
+    fnNumber: "fn07"
+    keycode: 26
+  fn07D6:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_D6.wav"
+    fnNumber: "fn07"
+    keycode: 18
+  fn07E4:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_E4.wav"
+    fnNumber: "fn07"
+    keycode: 6
+  fn07E5:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_E5.wav"
+    fnNumber: "fn07"
+    keycode: 56
+  fn07E5D:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_E5.wav"
+    fnNumber: "fn07"
+    keycode: 8
+  fn07E6:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_E6.wav"
+    fnNumber: "fn07"
+    keycode: 19
+  fn07F#4:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_F#4.wav"
+    fnNumber: "fn07"
+    keycode: 10
+  fn07F#5:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_F#5.wav"
+    fnNumber: "fn07"
+    keycode: 40
+  fn07F#5D:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_F#5.wav"
+    fnNumber: "fn07"
+    keycode: 34
+  fn07F#6:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_F#6.wav"
+    fnNumber: "fn07"
+    keycode: 46
+  fn07F4:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_F4.wav"
+    fnNumber: "fn07"
+    keycode: 25
+  fn07F5:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_F5.wav"
+    fnNumber: "fn07"
+    keycode: 229
+  fn07F5D:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_F5.wav"
+    fnNumber: "fn07"
+    keycode: 21
+  fn07F6:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_F6.wav"
+    fnNumber: "fn07"
+    keycode: 47
+  fn07G#4:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_G#4.wav"
+    fnNumber: "fn07"
+    keycode: 11
+  fn07G#5:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_G#5.wav"
+    fnNumber: "fn07"
+    keycode: 35
+  fn07G#6:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_G#6.wav"
+    fnNumber: "fn07"
+    keycode: 42
+  fn07G4:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_G4.wav"
+    fnNumber: "fn07"
+    keycode: 5
+  fn07G5:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_G5.wav"
+    fnNumber: "fn07"
+    keycode: 23
+  fn07G6:
+    filepath: "/home/dbiber/soundSamples/chromatic/crystal/crystal_G6.wav"
+    fnNumber: "fn07"
+    keycode: 48
+  fn06A#4:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_A#4.wav"
+    fnNumber: "fn06"
+    keycode: 13
+  fn06A#5:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_A#5.wav"
+    fnNumber: "fn06"
+    keycode: 36
+  fn06A4:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_A4.wav"
+    fnNumber: "fn06"
+    keycode: 17
+  fn06A5:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_A5.wav"
+    fnNumber: "fn06"
+    keycode: 28
+  fn06A6:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_A6.wav"
+    fnNumber: "fn06"
+    keycode: 49
+  fn06B4:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_B4.wav"
+    fnNumber: "fn06"
+    keycode: 16
+  fn06B5:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_B5.wav"
+    fnNumber: "fn06"
+    keycode: 24
+  fn06C#4:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_C#4.wav"
+    fnNumber: "fn06"
+    keycode: 22
+  fn06C#5:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_C#5.wav"
+    fnNumber: "fn06"
+    keycode: 15
+  fn06C#5D:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_C#5.wav"
+    fnNumber: "fn06"
+    keycode: 31
+  fn06C#6:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_C#6.wav"
+    fnNumber: "fn06"
+    keycode: 38
+  fn06C4:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_C4.wav"
+    fnNumber: "fn06"
+    keycode: 29
+  fn06C5:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_C5.wav"
+    fnNumber: "fn06"
+    keycode: 54
+  fn06C5D:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_C5.wav"
+    fnNumber: "fn06"
+    keycode: 20
+  fn06C6:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_C6.wav"
+    fnNumber: "fn06"
+    keycode: 12
+  fn06D#4:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_D#4.wav"
+    fnNumber: "fn06"
+    keycode: 7
+  fn06D#5:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_D#5.wav"
+    fnNumber: "fn06"
+    keycode: 51
+  fn06D#5D:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_D#5.wav"
+    fnNumber: "fn06"
+    keycode: 32
+  fn06D#6:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_D#6.wav"
+    fnNumber: "fn06"
+    keycode: 39
+  fn06D4:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_D4.wav"
+    fnNumber: "fn06"
+    keycode: 27
+  fn06D5:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_D5.wav"
+    fnNumber: "fn06"
+    keycode: 55
+  fn06D5D:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_D5.wav"
+    fnNumber: "fn06"
+    keycode: 26
+  fn06D6:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_D6.wav"
+    fnNumber: "fn06"
+    keycode: 18
+  fn06E4:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_E4.wav"
+    fnNumber: "fn06"
+    keycode: 6
+  fn06E5:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_E5.wav"
+    fnNumber: "fn06"
+    keycode: 56
+  fn06E5D:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_E5.wav"
+    fnNumber: "fn06"
+    keycode: 8
+  fn06E6:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_E6.wav"
+    fnNumber: "fn06"
+    keycode: 19
+  fn06F#4:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_F#4.wav"
+    fnNumber: "fn06"
+    keycode: 10
+  fn06F#5:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_F#5.wav"
+    fnNumber: "fn06"
+    keycode: 40
+  fn06F#5D:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_F#5.wav"
+    fnNumber: "fn06"
+    keycode: 34
+  fn06F#6:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_F#6.wav"
+    fnNumber: "fn06"
+    keycode: 46
+  fn06F4:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_F4.wav"
+    fnNumber: "fn06"
+    keycode: 25
+  fn06F5:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_F5.wav"
+    fnNumber: "fn06"
+    keycode: 229
+  fn06F5D:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_F5.wav"
+    fnNumber: "fn06"
+    keycode: 21
+  fn06F6:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_F6.wav"
+    fnNumber: "fn06"
+    keycode: 47
+  fn06G#4:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_G#4.wav"
+    fnNumber: "fn06"
+    keycode: 11
+  fn06G#5:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_G#5.wav"
+    fnNumber: "fn06"
+    keycode: 35
+  fn06G#6:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_G#6.wav"
+    fnNumber: "fn06"
+    keycode: 42
+  fn06G4:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_G4.wav"
+    fnNumber: "fn06"
+    keycode: 5
+  fn06G5:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_G5.wav"
+    fnNumber: "fn06"
+    keycode: 23
+  fn06G6:
+    filepath: "/home/dbiber/soundSamples/chromatic/analogBassStab/analogBassStab_G6.wav"
+    fnNumber: "fn06"
+    keycode: 48
+
 

@@ -5,7 +5,6 @@
 #include "Manager.h"
 #include "MasterClock.h"
 #include "Structures.h"
-// #include "Window.h"
 #include <chrono>
 #include <thread>
 #include <condition_variable>
@@ -16,63 +15,48 @@
 #define BUFFER_THRESHOLD 2048
 // ####################################################################################
 
-struct VerboseOptions {
-    bool verbose;
-    bool masterClockVerbose;
-    bool keyboardEventVerbose;
-    bool managerVerbose;
-    bool looperManagerVerbose;
-    bool audioLooperVerbose;
-    bool graphicLooperVerbose;
-    bool audioManagerVerbose;
-    bool audioPlayerVerbose;
-    bool audioProcessorVerbose;
-    bool graphicManagerVerbose;
-    bool graphicPlayerVerbose;
-    bool graphicProcessorVerbose;
-    bool superVerbose;
-    bool timeVerbose;
-    bool mainVerbose;
+// struct VerboseOptions {
+//     const YAML::Node& verbosity
 
-    explicit VerboseOptions(const YAML::Node& config) {
-        verbose = config["verbose"].as<bool>();
-        if (verbose) {
-            masterClockVerbose = true;
-            keyboardEventVerbose = true;
-            managerVerbose = true;
-            looperManagerVerbose = true;
-            audioLooperVerbose = true;
-            graphicLooperVerbose = true;
-            audioManagerVerbose = true;
-            audioPlayerVerbose = true;
-            audioProcessorVerbose = true;
-            graphicManagerVerbose = true;
-            graphicPlayerVerbose = true;
-            graphicProcessorVerbose = true;
-            mainVerbose = true;
-        } else {
-            masterClockVerbose = config["masterClockVerbose"].as<bool>();
-            keyboardEventVerbose = config["keyboardEventVerbose"].as<bool>();
-            managerVerbose = config["managerVerbose"].as<bool>();
+//     explicit VerboseOptions(const YAML::Node& config) {
+//         verbose = config["verbose"].as<bool>();
+//         if (verbose) {
+//             masterClockVerbose = true;
+//             keyboardEventVerbose = true;
+//             managerVerbose = true;
+//             looperManagerVerbose = true;
+//             audioLooperVerbose = true;
+//             graphicLooperVerbose = true;
+//             audioManagerVerbose = true;
+//             audioPlayerVerbose = true;
+//             audioProcessorVerbose = true;
+//             graphicManagerVerbose = true;
+//             graphicPlayerVerbose = true;
+//             graphicProcessorVerbose = true;
+//             mainVerbose = true;
+//         } else {
+//             masterClockVerbose = config["masterClockVerbose"].as<bool>();
+//             keyboardEventVerbose = config["keyboardEventVerbose"].as<bool>();
+//             managerVerbose = config["managerVerbose"].as<bool>();
 
-            looperManagerVerbose = config["looperManagerVerbose"].as<bool>();
-            audioLooperVerbose = config["audioLooperVerbose"].as<bool>();
-            graphicLooperVerbose = config["graphicLooperVerbose"].as<bool>();
+//             looperManagerVerbose = config["looperManagerVerbose"].as<bool>();
+//             audioLooperVerbose = config["audioLooperVerbose"].as<bool>();
+//             graphicLooperVerbose = config["graphicLooperVerbose"].as<bool>();
 
-            audioManagerVerbose = config["audioManagerVerbose"].as<bool>();
-            audioPlayerVerbose = config["audioPlayerVerbose"].as<bool>();
-            audioProcessorVerbose = config["audioProcessorVerbose"].as<bool>();
+//             audioManagerVerbose = config["audioManagerVerbose"].as<bool>();
+//             audioPlayerVerbose = config["audioPlayerVerbose"].as<bool>();
+//             audioProcessorVerbose = config["audioProcessorVerbose"].as<bool>();
 
-            graphicManagerVerbose = config["graphicManagerVerbose"].as<bool>();
-            graphicPlayerVerbose = config["graphicPlayerVerbose"].as<bool>();
-            graphicProcessorVerbose = config["graphicProcessorVerbose"].as<bool>();
+//             graphicManagerVerbose = config["graphicManagerVerbose"].as<bool>();
+//             graphicPlayerVerbose = config["graphicPlayerVerbose"].as<bool>();
+//             graphicProcessorVerbose = config["graphicProcessorVerbose"].as<bool>();
 
-            mainVerbose = config["mainVerbose"].as<bool>();
-        }
-        superVerbose = config["superVerbose"].as<bool>();
-        timeVerbose = config["timeVerbose"].as<bool>();
-    }
-};
+//             mainVerbose = config["mainVerbose"].as<bool>();
+//         }
+//         superVerbose = config["superVerbose"].as<bool>();
+//         timeVerbose = config["timeVerbose"].as<bool>();
+//     }
+// };
 
 // Signal handler function to handle termination signal (SIGINT)
 void handleTermination(int signal) {
@@ -154,12 +138,15 @@ int main(int argc, char* argv[]) {
     // Set up the termination signal handler
     signal(SIGINT, handleTermination);
     const std::string configFile = argumentHandler(argc, argv);
-
-    // Read configurations from YAML file
     YAML::Node config = YAML::LoadFile(configFile);
-    VerboseOptions verboseOptions(config);
+    
+    YAML::Node audioMixerConfig = config["audioMixer"];
+    YAML::Node windowConfig = config["window"];
+    YAML::Node notesConfig = config["notes"];
+    YAML::Node verbosity = config["verbosity"];
+    bool mainVerbose = verbosity["mainVerbose"].as<bool>();
 
-    if (verboseOptions.mainVerbose) {
+    if (mainVerbose) {
         printf("Main::Verbosity Initialized.\n");
     }
 
@@ -198,21 +185,17 @@ int main(int argc, char* argv[]) {
         {"KP9", {&loopKP9State, kp9LoopDuration}}
     };
 
-
-    bool verbose = verboseOptions.mainVerbose;
-
-    YAML::Node audioMixerConfig = config["audioMixer"];
-    YAML::Node windowConfig = config["window"];
-    YAML::Node notesConfig = config["notes"];
-
-    if (verboseOptions.mainVerbose) {
+    if (mainVerbose) {
         printf("Main::Starting MasterClock.\n");
     }
 
-    MasterClock masterClock(bpm, beatDivisions, verboseOptions.masterClockVerbose, verboseOptions.superVerbose, verboseOptions.timeVerbose);
+    MasterClock masterClock(bpm, beatDivisions, 
+        verbosity["masterClockVerbose"].as<bool>(), 
+        verbosity["superVerbose"].as<bool>(), 
+        verbosity["timeVerbose"].as<bool>());
     masterClock.start();
 
-    if (verboseOptions.mainVerbose) {
+    if (mainVerbose) {
         printf("Main::Starting SDL Video, Audio, and Events.\n");
     }
     // Intialize SDL and audio subsystem
@@ -220,18 +203,11 @@ int main(int argc, char* argv[]) {
         printf("---SDL initialization failed: %s\n", SDL_GetError());
         return 1;
     }
-    if (verboseOptions.mainVerbose) {
+    if (mainVerbose) {
         printf("Main::Starting Manager.\n");
     }
     std::unique_ptr<Manager> manager(new Manager(masterClock, 
-        verboseOptions.managerVerbose, verboseOptions.superVerbose, verboseOptions.timeVerbose, 
-        verboseOptions.looperManagerVerbose, verboseOptions.audioLooperVerbose, verboseOptions.graphicLooperVerbose,
-        verboseOptions.graphicManagerVerbose, verboseOptions.graphicPlayerVerbose, verboseOptions.graphicProcessorVerbose,
-        verboseOptions.audioManagerVerbose, verboseOptions.audioPlayerVerbose, verboseOptions.audioProcessorVerbose,
-        verboseOptions.keyboardEventVerbose, stringBoolPairs, notesConfig, windowConfig, audioMixerConfig));
-    if (verboseOptions.mainVerbose) {
-        printf("Main::Attempting to start BusyWaitHack.\n");
-    }
+        verbosity, stringBoolPairs, notesConfig, windowConfig, audioMixerConfig));
     std::thread mainThread([&]() {
         try {
             masterClock.executeScheduledBatches();

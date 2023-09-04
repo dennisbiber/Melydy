@@ -8,15 +8,12 @@
 
 LooperManager::LooperManager(MasterClock& mc, KeyboardEvent& kb, 
     const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs,
-    bool verbose, bool superVerbose, bool timeVerbose,
-    bool audioLooperVerbose, bool graphicLooperVerbose,
-    std::condition_variable& managerThreadCV, std::mutex& managerThreadMutex) :
+    const YAML::Node& looperVerbosity,  bool superVerbose, bool timeVerbose) :
     masterClock(mc), keyboardEvent(kb),
-    verbose(verbose), superVerbose(superVerbose), timeVerbose(timeVerbose), 
-    audioLooperVerbose(audioLooperVerbose), graphicLooperVerbose(graphicLooperVerbose),
+    verbosity(looperVerbosity),
+    verbose(verbosity["looperManagerVerbose"].as<bool>()), superVerbose(superVerbose), timeVerbose(timeVerbose), 
     stringBoolPairs(stringBoolPairs),
-    addLooper(false), removeLooper(false), runAudioLooperThread(false),
-    managerThreadCV(managerThreadCV), managerThreadMutex(managerThreadMutex) {
+    addLooper(false), removeLooper(false), runAudioLooperThread(false){
 }
 
 LooperManager::~LooperManager() {
@@ -79,12 +76,13 @@ void LooperManager::removeAudioLoopers(const std::string& keypadIDStr) {
 }
 
 bool LooperManager::addAudioLooper(const std::string& keypadIDStr, AudioPlayer* player, double loopDuration) {
-    if (verbose && audioLooperVerbose) {
+    if (verbose) {
         printf("      LooperManager::addAudioLooper::Looper ID: %s\n", keypadIDStr.c_str());
         printf("      LooperManager::addAudioLooper::Looper Duration %f.\n", loopDuration);
     }
     try {
-        auto audioLooper = std::make_shared<AudioLooper>(masterClock, player, loopDuration, audioLooperVerbose, keypadIDStr);
+        auto audioLooper = std::make_shared<AudioLooper>(masterClock, player, 
+            loopDuration, verbosity["audioLooperVerbose"].as<bool>(), keypadIDStr);
         std::string idTag = audioLooper->startLoop();
         
         // Add the looper to both data structures

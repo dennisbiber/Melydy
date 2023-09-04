@@ -23,11 +23,7 @@ typedef float Sample;
 class Manager {
     public:
         Manager(MasterClock& mc,
-            bool verbose, bool superVerbose, bool timeVerbose,
-            bool looperManagerVerbose, bool audioLooperVerbose, bool graphicLooperVerbose,
-            bool graphicManagerVerbose, bool graphicPlayerVerbose, bool graphicProcessorVerbose,
-            bool audioManagerVerbose, bool audioPlayerVerbose, bool audioProcessorVerbose,
-            bool keyboardEventVerbose, 
+            const YAML::Node& verbosity,
             const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs,
             const YAML::Node& notesConfig, const YAML::Node& windowConfig,
             const YAML::Node& audioMixerConfig);
@@ -53,18 +49,10 @@ class Manager {
         void setNotesConfig();
 
         // variables
+        const YAML::Node& verbosity;
         bool verbose;
         bool superVerbose;
         bool timeVerbose;
-        bool looperManagerVerbose;
-        bool audioLooperVerbose;
-        bool graphicLooperVerbose;
-        bool graphicManagerVerbose;
-        bool graphicPlayerVerbose;
-        bool graphicProcessorVerbose;
-        bool audioProcessorVerbose;
-        bool audioManagerVerbose;
-        bool audioPlayerVerbose;
         int mixerBufferSize;
         std::string currentFunction;
         std::mutex managerThreadMutex;

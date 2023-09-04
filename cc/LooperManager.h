@@ -19,9 +19,7 @@ class LooperManager {
     public:
         LooperManager(MasterClock& mc, KeyboardEvent& kb,
         const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs,
-        bool verbose, bool superVerbose, bool timeVerbose,
-        bool audioLooperVerbose, bool graphicLooperVerbose,
-        std::condition_variable& managerThreadCV, std::mutex& managerThreadMutex);
+        const YAML::Node& verbosity, bool superVerbose, bool timeVerbose);
         ~LooperManager();
         void audioLooperTask();
         bool addAudioLooper(const std::string& keypadIDStr, AudioPlayer* player, double loopDuration);
@@ -34,6 +32,7 @@ class LooperManager {
         MasterClock& masterClock;
         KeyboardEvent& keyboardEvent;
 
+        const YAML::Node& verbosity;
         bool verbose; 
         bool superVerbose;
         bool timeVerbose;
@@ -43,11 +42,6 @@ class LooperManager {
         bool removeLooper;
         bool runAudioLooperThread;
 
-        std::thread audioLooperThread;
-        std::mutex audioLoopersMutex;
-        std::condition_variable& managerThreadCV;
-        std::mutex& managerThreadMutex;
-        //std::unordered_map<std::string, std::pair<std::string, std::pair<bool, std::shared_ptr<AudioLooper>>>> audioLoopers;
         std::unordered_multimap<std::string, AudioLooperInfo> audioLoopers;
         std::unordered_multimap<std::string, std::shared_ptr<AudioLooper>> keypadIDToLoopers;
         const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs;

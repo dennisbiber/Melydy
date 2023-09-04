@@ -3,17 +3,15 @@
 #include <cstdio>
 #include <cmath>
 
-AudioManager::AudioManager(bool verbose, bool superVerbose, bool audioPlayerVerbose, bool audioProcessorVerbose, 
+AudioManager::AudioManager(const YAML::Node& audioVerbosity, bool superVerbose,
     MasterClock& mc, KeyboardEvent& kb, LooperManager& lm,
-    const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs, const YAML::Node& audioMixerConfig,
-    std::condition_variable& managerThreadCV, std::mutex& managerThreadMutex) :
-    verbose(verbose), audioPlayerVerbose(audioPlayerVerbose), 
-    audioProcessorVerbose(audioProcessorVerbose), superVerbose(superVerbose),
+    const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs, const YAML::Node& audioMixerConfig) :
+    verbosity(audioVerbosity),
+    verbose(verbosity["audioManagerVerbose"].as<bool>()), superVerbose(superVerbose),
     masterClock(mc), keyboardEvent(kb), looperManager(lm),
     bpm(mc.getBPM()), beatDivisions(mc.getBeatDivisions()), 
     beatDurationAsDuration(mc.fetchDivisionDurationAsDuration()),
-    audioProcessor(audioProcessorVerbose), stringBoolPairs(stringBoolPairs),
-    managerThreadCV(managerThreadCV), managerThreadMutex(managerThreadMutex),
+    audioProcessor(verbosity["audioProcessorVerbose"].as<bool>()), stringBoolPairs(stringBoolPairs),
     runAudioPlaybackThread(false), addLooper(false) {
     // Initialize SDL_mixer
     int mixerSampleRate = audioMixerConfig["mixer_sample_rate"].as<int>();
@@ -91,18 +89,14 @@ bool AudioManager::addAudioPlayer(const char* filepath, NoteConfiguration config
         std::string noteName = config.noteName;
 
         // Create and manage AudioPlayer instance using unique_ptr
-        AudioPlayer* player = new AudioPlayer(audioPlayerVerbose, filepath, audioProcessor);
+        AudioPlayer* player = new AudioPlayer(verbosity["audioPlayerVerbose"].as<bool>(), filepath, audioProcessor);
 
         // Lock the playerMapMutex to safely modify playerMap
         {
             std::lock_guard<std::mutex> lock(playerMapMutex);
             playerMap.emplace(noteName, std::make_pair(functionAssignment, player));
         }
-        // Lock the noteConfigurationsMutex to safely modify noteConfigurations
-        {
-            std::lock_guard<std::mutex> lock(noteConfigurationsMutex);
-            noteConfigurations.push_back(config);
-        }
+        noteConfigurations.push_back(config);
 
         return true;
     } catch (const std::exception& e) {
@@ -147,7 +141,7 @@ AudioPlayer* AudioManager::getAudioPlayer(SDL_Scancode keyCode) {
 }
 
 void AudioManager::audioPlaybackTask() {
-    if (audioPlayerVerbose && superVerbose) {
+    if (superVerbose) {
         printf("      AudioManager::audioPlaybackHandler::stringBoolPairs:\n");
         printf("   addLooper: %s.\n", addLooper ? "true" : "false");
         for (const auto& pair : stringBoolPairs) {
@@ -156,7 +150,7 @@ void AudioManager::audioPlaybackTask() {
     }
 
     if (!keyboardEvent.isScancodeDataEmpty()) {
-        if (verbose && audioPlayerVerbose) {
+        if (verbose) {
             printf("      AudioManager::audioPlaybackHandler::Keyboard event found.\n");
         }
         std::string noteInfoString = "Playing Notes: ";
@@ -192,7 +186,7 @@ void AudioManager::audioPlaybackTask() {
                     }
                 }
             } else {
-                if (verbose && audioPlayerVerbose) {
+                if (verbose) {
                     printf("      AudioManager::audioPlaybackHandler::Note '%d' not found in the player map.\n", keycode);
                 }
             }

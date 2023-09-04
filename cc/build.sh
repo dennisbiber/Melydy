@@ -3,7 +3,7 @@
 # Function to compile individual source files
 compile_source() {
     echo "Oi! Compilin' $1, in'it..."
-    if ! g++ -O3 -g -c "$1" -I/usr/include/soundtouch -I. -o ${1%.cc}.o -lSDL2 -lsndfile -lfftw -pg -lstdc++fs -lasound -lm; then
+    if ! g++ -O2 -c "$1" -o ${1%.cc}.o; then
         echo "Blimey! Compilin' $1 failed, it did!"
         exit 1
     fi
@@ -13,7 +13,7 @@ compile_source() {
 # Function to link object files and create the executable
 link_objects() {
     echo "Gawd, linkin' them object files now..."
-    if ! g++ -O3 -o audio_player \
+    if ! g++ -O2 -o audio_player \
         ScheduleAction.o \
         BatchActions.o \
         KeyboardEvent.o \
@@ -29,19 +29,11 @@ link_objects() {
         LooperManager.o \
         main.o \
         -lstdc++fs \
-        -L/usr/lib/arm-linux-gnueabihf \
         -lSDL2 \
-        -lSDL2main \
         -lSDL2_mixer \
         -lpthread \
         -lyaml-cpp \
-        -lsamplerate \
         -lSDL2_ttf \
-        -lSoundTouch \
-        -lsndfile \
-        -lfftw3 \
-        -lasound \
-        -pg \
         -lm;
     then
         echo "Cor blimey! Linkin' failed, it did!"

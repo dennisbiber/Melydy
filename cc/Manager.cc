@@ -26,7 +26,7 @@ Manager::Manager(MasterClock& mc,
         printf("   Manager::Constructor Entered.\n");
     }
     setNotesConfig();
-    mixerBufferSize = audioMixerConfig["mixer_buffer_size"].as<int>();
+    mixerBufferSize = audioMixerConfig["mixer_buffer_size"].as<int>(0);  // unused by the GStreamer engine; optional
     scheduleAudioLooperTask();
     scheduleAudioPlaybackTask();
     startKeyboardThread();

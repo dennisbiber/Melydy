@@ -1,26 +1,28 @@
 #ifndef MASTER_CLOCK_H
 #define MASTER_CLOCK_H
 
-#ifdef _WIN32
-#include <SDL.h> // Include path for Windows
-#include <SDL_mixer.h>
-#else
-#include <SDL2/SDL.h> // Include path for Linux
-#include <SDL2/SDL_mixer.h>
-#endif
+#include "StreamClock.h"
 #include "ScheduleAction.h"
 #include "BatchActions.h"
 #include "Structures.h"
 #include <atomic>
 #include <chrono>
+#include <deque>
 #include <vector>
 #include <thread>
 #include <iomanip>
 #include <mutex>
 #include <condition_variable>
-#include <queue>
 #include <functional>
 
+// The scheduler. Time is measured on StreamClock (the GStreamer pipeline
+// clock), and every batch lives on the beat grid:
+//
+//     grid division k  ==  running time k * divisionDuration
+//
+// A batch due at grid time T is executed early, at T - lookahead, and its
+// actions read getTickTime() == T. Audio actions stamp T on their buffers,
+// so how late the thread wakes up no longer changes when the sound plays.
 class MasterClock {
 public:
     explicit MasterClock(double bpm = 120.0, double beatDivisions = 8.0, bool vb = false, bool sVb = false, bool timeVerbose = false);
@@ -28,47 +30,55 @@ public:
     void setBPM(double newBPM);
     void start();
     void stop();
-    double fetchDivisionDurationInSeconds() const;
     std::mutex mtx;
-    mutable std::mutex divisionTimesMutex;
-
-    TimePoint getDivisionTimePoint(int index) const;
 
     TimePoint getCurrentTime() const;
-    // TimePoint getStartTime() const;
 
     double getBPM() const;
     double getBeatDivisions() const;
     Duration fetchDivisionDurationAsDuration() const;
     int getCurrentDivisonOfBeat();
 
+    // The grid time of the batch currently executing. Actions schedule
+    // their audio at this time instead of "now".
+    TimePoint getTickTime() const;
+    // First grid division at or after t.
+    TimePoint nextGridPoint(TimePoint t) const;
+    // How far ahead of a tick its batch is executed. Must cover the worst
+    // case scheduler wake-up delay plus task processing time.
+    void setLookahead(Duration lookahead);
+    Duration getLookahead() const;
+
     // Process Timer
     void startTimer(const std::string& processName, bool start);
     std::string getDurationString(const std::string& processName);
     Duration getDuration(const std::string& processName);
     void writeStringToFile(const std::string& content);
-    bool isNoteDataEmpty();
-    void updateWindwoTimeValues();
-    void waitForBufferUpdate();
     void executeScheduledBatches();
     void setRuntimeTasks(std::function<void()> taskFunction);
 
     bool containsBatchActions(const std::string& idTag) const;
     void removeBatchFromQueue(const std::string& idTag);
-    void addItemToBatchAtInterval(std::function<void()> function, Duration interval, 
+    void addItemToBatchAtInterval(std::function<void()> function, Duration interval,
         const std::string& idTag, bool isLooping);
 
 private:
-    // declare member functions
-    static void emptyFunction(MasterClock&) {};
+    // Adds/removes requested while the scheduler is iterating are queued
+    // and applied between passes, so the batch list never changes under
+    // the loop that is walking it.
+    struct PendingChange {
+        bool isRemoval;
+        std::string idTag;
+        std::function<void()> function;
+        Duration interval;
+        TimePoint executionTime;
+        bool isLooping;
+    };
+
     Duration calculateDivisionDuration() const;
-    void timePointQueue(Duration correctionTime);
-    void initTimePointQueue();
     static void setVerboseStatus(bool vb, bool sVb, bool tVb);
-    void createNewBatchAndAddAction(std::function<void()> function, Duration interval,
-        const std::string& idTag, bool isLooping);
-    bool searchBatchActions(const std::string& idTag) const;
-    size_t getIndexForBatch(const BatchActions& batch) const;
+    void applyPendingChanges();
+    void logWriterLoop();
 
     // declare member variables
     double bpm;
@@ -77,32 +87,34 @@ private:
     static bool verbose;
     static bool superVerbose;
     static bool timeVerbose;
-    bool bufferUpdated;
-    bool isNoteDataReady;
-    bool logging;
     int currentDivisionOfBeat;
     std::string filename;
 
     // declare time units
-    TimePoint startTime;
     Duration divisionDurationAsDuration;
-    Duration timeCorrectionForBuffer;
-    TimePoint nextDivisionTime;
+    Duration lookahead;
     Duration processingDuration;
+    TimePoint tickTime;
+    bool inTick;
+    std::thread::id schedulerThreadId;
 
     // declare structures
-    std::vector<std::pair<std::string, std::pair<TimePoint, TimePoint>>> processRecords;
-    std::vector<TimePoint> divisionTimes;
-    std::unordered_map<std::string, size_t> idTagToBatchIndex;
+    std::vector<std::pair<std::string, std::pair<std::chrono::steady_clock::time_point,
+        std::chrono::steady_clock::time_point>>> processRecords;
     std::deque<BatchActions> scheduledActionBatches;
-    
+    std::vector<PendingChange> pendingChanges;
+
     // declare threading mechanisms
-    std::thread timerThread;
     mutable std::mutex timerMutex;
-    std::mutex mtxNoteData;
-    std::condition_variable bufferUpdateCV;
-    std::condition_variable cvNoteData;
-    mutable std::mutex scheduledIntervalsMutex; //
+    mutable std::recursive_mutex batchesMutex;   // scheduler holds it for a whole pass
+    mutable std::mutex pendingMutex;
+
+    // Logging happens on its own thread so file I/O can't delay the scheduler.
+    std::thread logThread;
+    std::mutex logMutex;
+    std::condition_variable logCV;
+    std::vector<std::string> logQueue;
+    bool logStop;
 };
 
 #endif // MASTER_CLOCK_H

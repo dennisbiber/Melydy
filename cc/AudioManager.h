@@ -2,6 +2,7 @@
 #define AUDIO_MANAGER_H
 
 #include "AudioPlayer.h"
+#include "GstAudioEngine.h"
 #include "AudioProcessor.h"
 #include "KeyboardEvent.h"
 #include "LooperManager.h"
@@ -12,7 +13,7 @@
 #include <chrono>
 
 typedef float Sample;
-using Duration = std::chrono::high_resolution_clock::duration;
+#include "StreamClock.h"
 
 class AudioManager {
     public:
@@ -33,7 +34,10 @@ class AudioManager {
         void audioPlaybackTask();
         AudioPlayer* getAudioPlayer(SDL_Scancode keycode);
 
+        static GstAudioEngine::Config makeEngineConfig(const YAML::Node& audioMixerConfig, bool verbose);
+
         // OBJECTS
+        GstAudioEngine engine;   // replaces Mix_OpenAudio / the SDL_mixer device
         MasterClock& masterClock;
         KeyboardEvent& keyboardEvent;
         LooperManager& looperManager;

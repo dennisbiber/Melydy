@@ -3,38 +3,43 @@
 #include <cstdio>
 #include <cmath>
 
+GstAudioEngine::Config AudioManager::makeEngineConfig(const YAML::Node& audioMixerConfig, bool verbose) {
+    // Same YAML section as before. mixer_buffer_size / audio_format are no
+    // longer needed: buffer size no longer decides when a sound starts, and the
+    // engine always mixes in 32-bit float.
+    GstAudioEngine::Config config;
+    config.sampleRate = audioMixerConfig["mixer_sample_rate"].as<int>(48000);
+    config.voices = audioMixerConfig["mixer_channels"].as<int>(8);
+    config.sink = audioMixerConfig["gst_sink"].as<std::string>("autoaudiosink");
+    config.mixerLatencyMs = audioMixerConfig["gst_mixer_latency_ms"].as<int>(10);
+    config.verbose = verbose;
+    return config;
+}
+
 AudioManager::AudioManager(MasterClock& mc, KeyboardEvent& kb, LooperManager& lm,
     const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs,
     const YAML::Node& audioVerbosity, const YAML::Node& audioMixerConfig, bool sV) :
-    verbose(audioVerbosity["audioManagerVerbose"].as<bool>()), superVerbose(sV),
-    audioProcessor(audioVerbosity["audioProcessorVerbose"].as<bool>()),
+    engine(makeEngineConfig(audioMixerConfig, audioVerbosity["audioManagerVerbose"].as<bool>())),
     masterClock(mc), keyboardEvent(kb), looperManager(lm),
-    bpm(mc.getBPM()), beatDivisions(mc.getBeatDivisions()), 
-    beatDurationAsDuration(mc.fetchDivisionDurationAsDuration()),
+    audioProcessor(audioVerbosity["audioProcessorVerbose"].as<bool>()),
+    audioPlayerVerbose(audioVerbosity["audioPlayerVerbose"].as<bool>()),
     stringBoolPairs(stringBoolPairs),
+    verbose(audioVerbosity["audioManagerVerbose"].as<bool>()), superVerbose(sV),
     runAudioPlaybackThread(false), addLooper(false),
-    audioPlayerVerbose(audioVerbosity["audioPlayerVerbose"].as<bool>()) {
+    bpm(mc.getBPM()), beatDurationAsDuration(mc.fetchDivisionDurationAsDuration()),
+    beatDivisions(mc.getBeatDivisions()) {
     if (verbose) {
         printf("   AudioManager::AudioManager::Entered.\n");
     }
-    // Initialize SDL_mixer
-    int mixerSampleRate = audioMixerConfig["mixer_sample_rate"].as<int>();
-    int mixerChannels = audioMixerConfig["mixer_channels"].as<int>();
-    int mixerBufferSize = audioMixerConfig["mixer_buffer_size"].as<int>();
-    int mixerAudioFormatSign = audioMixerConfig["audio_format"].as<int>();
-    int mixerAudioFormat;
-    if (mixerAudioFormatSign == 1) {
-        mixerAudioFormat = AUDIO_S16LSB; // WSL
-    } else if (mixerAudioFormatSign == 2) {
-        mixerAudioFormat = AUDIO_F32SYS; // PI
-    }
-
-    if (Mix_OpenAudio(mixerSampleRate, mixerAudioFormat, mixerChannels, mixerBufferSize) < 0) {
-        printf("---SDL_mixer initialization failed: %s\n", Mix_GetError());
+    if (!engine.start()) {
+        printf("---GStreamer audio engine failed to start.\n");
         return;
-    } else {
-        printf("   AudioManager::SDL_mixer initialization successful.\n");
     }
+    // The scheduler runs each tick `lookahead` early so its buffers reach
+    // audiomixer before their timestamp comes due.
+    int lookaheadMs = audioMixerConfig["scheduler_lookahead_ms"].as<int>(30);
+    masterClock.setLookahead(std::chrono::milliseconds(lookaheadMs));
+    printf("   AudioManager::GStreamer audio engine running (lookahead %d ms).\n", lookaheadMs);
     if (verbose) {
         printf("      AudioManager::Constructred.\n");
     }
@@ -42,7 +47,7 @@ AudioManager::AudioManager(MasterClock& mc, KeyboardEvent& kb, LooperManager& lm
 
 AudioManager::~AudioManager() {
     unschedulePlayback();
-    Mix_CloseAudio();
+    engine.shutdown();
 }
 // Getter/Setter Function Section
 //###################################################################################################################
@@ -93,7 +98,7 @@ bool AudioManager::addAudioPlayer(const char* filepath, NoteConfiguration config
         std::string noteName = config.noteName;
 
         // Create and manage AudioPlayer instance using unique_ptr
-        AudioPlayer* player = new AudioPlayer(audioPlayerVerbose, filepath, audioProcessor);
+        AudioPlayer* player = new AudioPlayer(audioPlayerVerbose, filepath, audioProcessor, engine);
 
         // Lock the playerMapMutex to safely modify playerMap
         {
@@ -182,7 +187,8 @@ void AudioManager::audioPlaybackTask() {
         std::for_each(scancodeData.begin(), scancodeData.end(), [&](const auto& keycode) {
             AudioPlayer* player = getAudioPlayer(keycode);
             if (player) {
-                player->playAudio();
+                // Play on the grid division this tick is for, not "now".
+                player->playAt(masterClock.getTickTime());
                 if (activeLooper && addLooper) {
                     bool success = looperManager.addAudioLooper(keypadIDString, player, loopDuration);
                     if (verbose) {

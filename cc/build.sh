@@ -1,9 +1,13 @@
 #!/bin/bash
 
+# GStreamer compile/link flags (from libgstreamer1.0-dev / libgstreamer-plugins-base1.0-dev)
+GST_CFLAGS=$(pkg-config --cflags gstreamer-1.0 gstreamer-app-1.0) || { echo "Blimey! GStreamer dev packages not found!"; exit 1; }
+GST_LIBS=$(pkg-config --libs gstreamer-1.0 gstreamer-app-1.0)
+
 # Function to compile individual source files
 compile_source() {
     echo "Oi! Compilin' $1, in'it..."
-    if ! g++ -O2 -c "$1" -o ${1%.cc}.o; then
+    if ! g++ -O2 $GST_CFLAGS -c "$1" -o ${1%.cc}.o; then
         echo "Blimey! Compilin' $1 failed, it did!"
         exit 1
     fi
@@ -14,6 +18,8 @@ compile_source() {
 link_objects() {
     echo "Gawd, linkin' them object files now..."
     if ! g++ -O2 -o audio_player \
+        StreamClock.o \
+        GstAudioEngine.o \
         ScheduleAction.o \
         BatchActions.o \
         KeyboardEvent.o \
@@ -30,7 +36,7 @@ link_objects() {
         main.o \
         -lstdc++fs \
         -lSDL2 \
-        -lSDL2_mixer \
+        $GST_LIBS \
         -lpthread \
         -lyaml-cpp \
         -lSDL2_ttf \
@@ -61,6 +67,18 @@ check_md5sum() {
 }
 
 # Compile source files and headers if necessary
+if ! check_md5sum StreamClock.cc || ! check_md5sum StreamClock.h; then
+    compile_source StreamClock.cc
+    get_md5sum StreamClock.cc > StreamClock.cc.md5
+    get_md5sum StreamClock.h > StreamClock.h.md5
+fi
+
+if ! check_md5sum GstAudioEngine.cc || ! check_md5sum GstAudioEngine.h; then
+    compile_source GstAudioEngine.cc
+    get_md5sum GstAudioEngine.cc > GstAudioEngine.cc.md5
+    get_md5sum GstAudioEngine.h > GstAudioEngine.h.md5
+fi
+
 if ! check_md5sum ScheduleAction.cc || ! check_md5sum ScheduleAction.h; then
     compile_source ScheduleAction.cc
     get_md5sum ScheduleAction.cc > ScheduleAction.cc.md5

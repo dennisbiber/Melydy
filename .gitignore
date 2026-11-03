@@ -1,0 +1,5 @@
+*.o
+*.md5
+cc/audio_player
+cc/mapping
+duration_logs_*.txt

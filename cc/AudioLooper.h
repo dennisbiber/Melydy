@@ -2,13 +2,6 @@
 #ifndef AUDIO_LOOPER_H
 #define AUDIO_LOOPER_H
 
-#ifdef _WIN32
-#include <SDL.h> // Include path for Windows
-#include <SDL_mixer.h>
-#else
-#include <SDL2/SDL.h> // Include path for Linux
-#include <SDL2/SDL_mixer.h>
-#endif
 #include "MasterClock.h"
 #include "AudioPlayer.h"
 #include <iostream>
@@ -44,9 +37,8 @@ private:
     double beatDivisions; // Number of divisions per beat from the MasterClock.
     bool verbose;
     std::string keyID;
-    std::chrono::high_resolution_clock::duration divisionDurationAsDuration;
-    std::chrono::high_resolution_clock::duration intervalDuration;
-    std::vector<std::chrono::high_resolution_clock::time_point> intervalTimes;
+    Duration divisionDurationAsDuration;
+    Duration intervalDuration;
     std::string idTag;
 };
 #endif // AUDIO_LOOPER_H

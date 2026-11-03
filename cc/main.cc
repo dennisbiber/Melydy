@@ -157,8 +157,9 @@ int main(int argc, char* argv[]) {
     if (mainVerbose) {
         printf("Main::Starting SDL Video, Audio, and Events.\n");
     }
-    // Intialize SDL and audio subsystem
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS) < 0) {
+    // Intialize SDL for video and keyboard events. Audio now goes through
+    // GStreamer (see GstAudioEngine), so SDL's audio subsystem isn't needed.
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
         printf("---SDL initialization failed: %s\n", SDL_GetError());
         return 1;
     }

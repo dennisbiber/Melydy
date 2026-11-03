@@ -6,14 +6,48 @@ this at production quality to integrate into any stage setup for live performanc
 Packages Need For Program:
 ```
 libsdl2-dev
-libsdl2-mixer-dev
 libsdl2-ttf-dev
 libyaml-cpp-dev
-libasound2-dev
+libgstreamer1.0-dev
+libgstreamer-plugins-base1.0-dev
+gstreamer1.0-plugins-base
+gstreamer1.0-plugins-good
+gstreamer1.0-alsa        # or gstreamer1.0-pulseaudio, for the audio sink
 ```
 
+## Audio engine: GStreamer
+
+Audio used to go through SDL_mixer. It now goes through a GStreamer pipeline
+(`cc/GstAudioEngine.*`), and every time in the program is measured on the
+pipeline's clock (`cc/StreamClock.*`):
+
+```
+appsrc voice0 ─┐
+appsrc voice1 ─┤
+     ...       ├─> audiomixer ─> audioconvert ─> audioresample ─> autoaudiosink
+appsrc voiceN ─┘
+```
+
+How a sound is played now:
+1. The beat grid is pipeline running time: division `k` is at `k * (60 / bpm / beatDivisions)`.
+2. `MasterClock` runs each batch `scheduler_lookahead_ms` *before* its grid time and exposes that grid time as `getTickTime()`.
+3. `AudioPlayer::playAt(tickTime)` pushes the decoded sample into a free `appsrc` voice with `PTS = tickTime`.
+4. `audiomixer` places the buffer at the exact sample for that PTS, and the audio sink is the pipeline clock, so the scheduler and the sound card share one clock.
+
+Timing bugs this fixes:
+* **Loop drift.** Loops used to reschedule from the moment the thread woke up (`now + interval`), so every wake-up delay was added to every later repeat. They now reschedule from the previous tick (`tick + interval`).
+* **Buffer quantization.** `Mix_PlayChannel` started sounds at the next mix buffer, up to ~43 ms late with a 2048-frame buffer. Timestamped buffers start on the exact sample.
+* **Two clocks.** The scheduler ran on the CPU clock and playback on the sound card's crystal. Now there is only the pipeline clock.
+* **Batch list changed mid-iteration.** Adding or removing a looper from inside a tick used to insert into the deque the scheduler was looping over (undefined behavior). Changes are now queued and applied between passes.
+* Log file I/O moved off the scheduler thread, and looper ID tags are unique, so two loops recorded on the same division of different beats no longer share a batch.
+
+Live key presses are still quantized to the next division, as before. Response time is now that division wait plus the lookahead plus the sink's latency (printed at startup).
+
+### Timing test
+`cc/tests/run_timing_test.sh [seconds]` runs the real `MasterClock`, `AudioLooper` and `AudioPlayer` code headless. It records to a WAV instead of the speakers and adds a random 0-20 ms of CPU load on every tick. `check_timing.py` then checks that every click landed on its scheduled sample.
+
 To build the proram, in the `/cc/` directory, the `build.sh` file will build all objects and link them into the `audio_player` object. It also
-will generate an executable ready to be called for runtime. The permissions will need set on the `build.sh` file to set it as executable.
+will generate an executable ready to be called for runtime. `build.sh` only checks each file's own `.cc`/`.h` for changes, not the headers it includes, so run `cleanbuild.sh` first after pulling changes. The permissions will need set on the `build.sh` file to set it as executable.
 
 In the python directory, there are analytical scripts. There are two files:
 `/python/looperDurationChecker.py` will provide data and plots on the cycle rates of different aspects of the program.
@@ -32,10 +66,12 @@ The "audio_player" program runs based entirely on configuration. All values are 
 # Part 1: 
 ```
 audioMixer:
-  mixer_buffer_size: 2048
   mixer_sample_rate: 48000
-  mixer_channels: 8
-  audio_format: 2 # 1=mono, 2=stereo
+  mixer_channels: 8               # number of GStreamer voices (simultaneous sounds)
+  gst_sink: "autoaudiosink"       # optional; e.g. "alsasink device=hw:0 buffer-time=20000 latency-time=5000"
+  gst_mixer_latency_ms: 10        # optional; how long audiomixer waits for late buffers
+  scheduler_lookahead_ms: 30      # optional; how far ahead of each tick the scheduler runs
+  # mixer_buffer_size and audio_format are ignored now (kept so old configs still load)
 ```
 
 # Part 2:

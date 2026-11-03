@@ -22,7 +22,7 @@ def read_wav(path):
         elif chunk_id == b'data':
             tag, channels, rate, _, _, bits = fmt
             width = bits // 8
-            samples = array.array('f' if tag == 3 else 'h', body[:len(body) // width * width])
+            samples = array.array(('d' if bits == 64 else 'f') if tag == 3 else 'h', body[:len(body) // width * width])
             scale = 1.0 if tag == 3 else 32768.0
             return rate, channels, samples, scale
         pos += 8 + size + (size & 1)

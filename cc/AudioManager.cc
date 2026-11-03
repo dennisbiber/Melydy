@@ -80,11 +80,17 @@ void AudioManager::unschedulePlayback() {
     if (verbose) {
         printf("       AudioManager::startHandlingPlayback::Signaling to Stop Audio Playback Thread.\n");
     }
+    // Free every player. This used to hold playerMapMutex and then call
+    // removeAudioPlayer(), which locks the same mutex again: a self-deadlock
+    // that only showed up once shutdown started running the destructors.
+    // (Buffers still queued in GStreamer keep their own reference to the
+    // samples, so deleting players here is safe.)
     std::lock_guard<std::mutex> lock(playerMapMutex);
-    for (const auto& config : noteConfigurations) {
-        removeAudioPlayer(config.keycode); // Clean up each audio player
+    for (auto& entry : playerMap) {
+        delete entry.second.second;
     }
-
+    playerMap.clear();
+    noteConfigurations.clear();
 }
 // Audio Player Section
 //###################################################################################################################

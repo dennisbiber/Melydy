@@ -8,7 +8,7 @@ num_samples: 200
 beatDivisions: 2.0
 APM_notedata_retrieve_delay: 0
 window:
-  font: "/home/dbiber/FreeSans.ttf"
+  font: "/usr/share/fonts/truetype/freefont/FreeSans.ttf"  # apt-get install fonts-freefont-ttf
   fontSize: 24
   g1Width: 100
   g1Height: 200

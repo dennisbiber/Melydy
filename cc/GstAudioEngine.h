@@ -11,7 +11,7 @@
 //
 //   appsrc v0 ─┐
 //   appsrc v1 ─┤
-//      ...     ├─> audiomixer ─> audioconvert ─> audioresample ─> <sink>
+//      ...     ├─> audiomixer ─> [F32 stereo @ rate] ─> audioconvert ─> audioresample ─> <sink>
 //   appsrc vN ─┘
 //
 // The key difference from SDL_mixer: Mix_PlayChannel meant "start this as soon

@@ -8,6 +8,7 @@ Packages Need For Program:
 libsdl2-dev
 libsdl2-ttf-dev
 libyaml-cpp-dev
+fonts-freefont-ttf       # FreeSans.ttf for the window text
 libgstreamer1.0-dev
 libgstreamer-plugins-base1.0-dev
 gstreamer1.0-plugins-base
@@ -42,6 +43,15 @@ Timing bugs this fixes:
 * Log file I/O moved off the scheduler thread, and looper ID tags are unique, so two loops recorded on the same division of different beats no longer share a batch.
 
 Live key presses are still quantized to the next division, as before. Response time is now that division wait plus the lookahead plus the sink's latency (printed at startup).
+
+### Threads
+* **Main thread:** SDL. It pumps keyboard events (`KeyboardEvent::processEvent`) and draws the window (`GraphicPlayer::renderFrame`). SDL requires both to run on the thread that created the window. Pumping events from a separate keyboard thread caused the intermittent UI crashes, and the window was never drawn, which is why it showed up transparent.
+* **Scheduler thread:** `MasterClock::executeScheduledBatches`.
+* **GStreamer's own threads:** mixing and output.
+
+Closing the window or pressing Ctrl-C shuts down cleanly: SDL turns Ctrl-C into a quit event.
+
+Keypad keys are hold-to-arm. Hold `KP1`-`KP9` (loop length) plus `KP+` while playing a note to record it as a loop, and hold `KP-` to clear loops.
 
 ### Timing test
 `cc/tests/run_timing_test.sh [seconds]` runs the real `MasterClock`, `AudioLooper` and `AudioPlayer` code headless. It records to a WAV instead of the speakers and adds a random 0-20 ms of CPU load on every tick. `check_timing.py` then checks that every click landed on its scheduled sample.

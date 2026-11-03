@@ -41,3 +41,6 @@ void GraphicManager::stopAnimationWindow() {
         windowThread.join(); // Wait for the thread to finish
     }
 }
+void GraphicManager::renderFrame(const std::string& label) {
+    graphicPlayer.renderFrame(label);
+}

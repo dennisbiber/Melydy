@@ -31,6 +31,9 @@ class Manager {
         ~Manager();
 
         void joinManagerThread();
+        // Runs on the main thread until the window is closed: pumps SDL
+        // events into KeyboardEvent and draws the UI.
+        void runEventLoop();
         void updateStates();
         void setFunction();
         
@@ -41,6 +44,7 @@ class Manager {
         void scheduleAudioLooperTask();
         void scheduleAudioPlaybackTask();
         void startKeyboardThread();
+        std::string buildStatusLabel();
         void startAnimationThread();
 
         // Objects

@@ -75,7 +75,11 @@ bool GstAudioEngine::start() {
     // sink can be swapped from the YAML config without touching code.
     std::string description =
         "audiomixer name=mix latency=" + std::to_string(mixerLatencyNs) +
-        " ! audioconvert ! audioresample ! " + config.sink + " ";
+        // Pin the mixer's output format. Unpinned, audiomixer negotiated it
+        // at startup and sometimes picked 44.1 kHz / F64, which made every
+        // voice get resampled inside the mixer. Conversion for the sound
+        // card happens once, after the mix.
+        " ! " + caps + " ! audioconvert ! audioresample ! " + config.sink + " ";
     for (int i = 0; i < config.voices; ++i) {
         description += "appsrc name=voice" + std::to_string(i) +
             " is-live=true format=time min-latency=0 max-bytes=0 caps=\"" + caps + "\" ! mix. ";

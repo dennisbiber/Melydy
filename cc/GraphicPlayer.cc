@@ -9,7 +9,9 @@
 GraphicPlayer::GraphicPlayer(const YAML::Node& windowConfig, 
     bool verbose, bool superVerbose, bool timeVerbose) : 
     verbose(verbose), superVerbose(superVerbose), timeVerbose(timeVerbose),
-    animationLoopRunning(false), fontSize(24) {
+    animationLoopRunning(false), fontSize(24),
+    window(nullptr), renderer(nullptr), your_font(nullptr),
+    labelTexture(nullptr), labelWidth(0), labelHeight(0) {
     // int gauge1Width = windowConfig["g1Width"].as<int>();
     // int gauge1Height = windowConfig["g1Height"].as<int>();
     // int gauge2Width = windowConfig["g2Width"].as<int>();
@@ -42,14 +44,6 @@ GraphicPlayer::GraphicPlayer(const YAML::Node& windowConfig,
 
     SDL_ShowCursor(SDL_DISABLE);
 
-    // Get the base path of the executable
-    char* basePath = SDL_GetBasePath();
-    if (basePath == nullptr) {
-        std::cerr << "         ---GraphicPlayer::GraphicPlayer::Failed to get the base path: " << SDL_GetError() << std::endl;
-        // Handle the error, e.g., throw an exception or exit the program
-        TTF_Quit(); // Quit SDL_ttf before SDL_Quit
-        return;
-    }
     this->your_font = TTF_OpenFont(font.c_str(), fontSize);
     if (!your_font) {
         std::cerr << "         ---GraphicPlayer::GraphicPlayer::Failed to load font: " << TTF_GetError() << std::endl;
@@ -67,12 +61,17 @@ GraphicPlayer::GraphicPlayer(const YAML::Node& windowConfig,
         // You can throw an exception here or handle the error in any way you prefer
     }
 
-    // Create the renderer
+    // Create the renderer. Fall back to software rendering when there's no
+    // GPU driver (VNC, some Pi setups, headless test runs).
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if (renderer == nullptr) {
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
+    }
     if (renderer == nullptr) {
         std::cerr << "         ---GraphicPlayer::GraphicPlayer::Failed to create SDL renderer: " << SDL_GetError() << std::endl;
         TTF_Quit(); // Quit SDL_ttf before SDL_Quit
         SDL_DestroyWindow(window); // Destroy the GraphicPlayer if the renderer creation failed
+        window = nullptr;
         // You can throw an exception here or handle the error in any way you prefer
     }
     // Calculate the position to center the text in the GraphicPlayer
@@ -89,7 +88,12 @@ GraphicPlayer::~GraphicPlayer() {
     if (animationLoopRunning) {
         stopAnimationLoopRunning();
     }
-    TTF_CloseFont(your_font);
+    if (labelTexture != nullptr) {
+        SDL_DestroyTexture(labelTexture);
+    }
+    if (your_font != nullptr) {
+        TTF_CloseFont(your_font);
+    }
     if (renderer != nullptr) {
         SDL_DestroyRenderer(renderer);
         renderer = nullptr;
@@ -110,6 +114,39 @@ bool GraphicPlayer::isAnimationLoopRunning() {
 
 void GraphicPlayer::stopAnimationLoopRunning() {
     animationLoopRunning = false;
+}
+
+// Draw one frame. Call from the main thread only (same thread that created
+// the window). The label texture is only rebuilt when the text changes.
+void GraphicPlayer::renderFrame(const std::string& label) {
+    if (renderer == nullptr) {
+        return;
+    }
+    SDL_SetRenderDrawColor(renderer, 18, 18, 24, 255);
+    SDL_RenderClear(renderer);
+
+    if (your_font != nullptr && label != currentLabel) {
+        if (labelTexture != nullptr) {
+            SDL_DestroyTexture(labelTexture);
+            labelTexture = nullptr;
+        }
+        currentLabel = label;
+        SDL_Color color = {235, 235, 235, 255};
+        SDL_Surface* surface = TTF_RenderUTF8_Blended(your_font, label.c_str(), color);
+        if (surface != nullptr) {
+            labelTexture = SDL_CreateTextureFromSurface(renderer, surface);
+            labelWidth = surface->w;
+            labelHeight = surface->h;
+            SDL_FreeSurface(surface);
+        }
+    }
+    if (labelTexture != nullptr) {
+        int windowWidth = 0, windowHeight = 0;
+        SDL_GetRendererOutputSize(renderer, &windowWidth, &windowHeight);
+        SDL_Rect dst = {(windowWidth - labelWidth) / 2, (windowHeight - labelHeight) / 2, labelWidth, labelHeight};
+        SDL_RenderCopy(renderer, labelTexture, nullptr, &dst);
+    }
+    SDL_RenderPresent(renderer);
 }
 
 void GraphicPlayer::startAnimationLoop() {

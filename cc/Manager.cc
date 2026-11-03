@@ -29,7 +29,8 @@ Manager::Manager(MasterClock& mc,
     mixerBufferSize = audioMixerConfig["mixer_buffer_size"].as<int>(0);  // unused by the GStreamer engine; optional
     scheduleAudioLooperTask();
     scheduleAudioPlaybackTask();
-    startKeyboardThread();
+    // No keyboard thread any more: SDL events are pumped on the main thread
+    // in runEventLoop().
     scheduleupdateStates();
     // startAnimationThread();
     if (verbose) {
@@ -121,6 +122,36 @@ void Manager::startAnimationThread() {
         printf("   Manager::startAnimationThread.\n");
     }
     graphicManager.startAnimationWindow();
+}
+
+void Manager::runEventLoop() {
+    SDL_Event event;
+    while (!keyboardEvent.quitRequested()) {
+        // Wake on any event, or every ~16 ms to redraw (~60 fps).
+        if (SDL_WaitEventTimeout(&event, 16)) {
+            keyboardEvent.processEvent(event);
+            while (SDL_PollEvent(&event)) {   // drain anything else queued
+                keyboardEvent.processEvent(event);
+            }
+        }
+        graphicManager.renderFrame(buildStatusLabel());
+    }
+    printf("   Manager::runEventLoop::Window closed.\n");
+}
+
+std::string Manager::buildStatusLabel() {
+    std::string label = "Melydy   " + keyboardEvent.getFunctionState() + "   loops:";
+    bool any = false;
+    for (int index = 1; index <= 9; index++) {
+        if (keyboardEvent.getKeypadStates(index - 1)) {
+            label += " KP" + std::to_string(index);
+            any = true;
+        }
+    }
+    if (!any) {
+        label += " none";
+    }
+    return label;
 }
 
 void Manager::startKeyboardThread() {

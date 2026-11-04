@@ -4,6 +4,7 @@
 #include <gst/app/gstappsink.h>
 #include <gst/app/gstappsrc.h>
 #include <gst/base/gstbasesink.h>
+#include <gst/audio/gstaudiobasesink.h>
 #include <cstdio>
 #include <cmath>
 #include <cstring>
@@ -173,6 +174,37 @@ bool GstAudioEngine::start() {
     for (auto& voice : voices) {
         gst_app_src_push_buffer(voice.src, makeBuffer(silence, config.sampleRate, TimePoint(Duration(0))));
         voice.busyUntil = TimePoint(Duration(gst_util_uint64_scale(primeFrames, GST_SECOND, config.sampleRate)));
+    }
+
+    // Make the audio device the pipeline's clock.
+    //
+    // A live pipeline otherwise runs on GstSystemClock and the audio sink
+    // has to keep correcting itself against it ("slaving"). Whether that
+    // works depends on how the sound server reports time. With PipeWire +
+    // Bluetooth the sink judged every buffer late and dropped it: the mixer
+    // produced sound and the speakers stayed silent. With the sink's clock
+    // as master there's nothing to correct: the scheduler, the mixer and
+    // the speakers all run on the sound card's time.
+    //
+    // autoaudiosink only creates its real sink at READY, so go there first.
+    gst_element_set_state(pipeline, GST_STATE_READY);
+    GstClock* deviceClock = nullptr;
+    if (config.useSinkClock) {
+        GstIterator* sinks = gst_bin_iterate_recurse(GST_BIN(pipeline));
+        GValue item = G_VALUE_INIT;
+        while (deviceClock == nullptr && gst_iterator_next(sinks, &item) == GST_ITERATOR_OK) {
+            GstElement* element = GST_ELEMENT(g_value_get_object(&item));
+            if (GST_IS_AUDIO_BASE_SINK(element) && GST_AUDIO_BASE_SINK(element)->provided_clock) {
+                deviceClock = GST_CLOCK(gst_object_ref(GST_AUDIO_BASE_SINK(element)->provided_clock));
+            }
+            g_value_reset(&item);
+        }
+        g_value_unset(&item);
+        gst_iterator_free(sinks);
+    }
+    if (deviceClock != nullptr) {
+        gst_pipeline_use_clock(GST_PIPELINE(pipeline), deviceClock);
+        gst_object_unref(deviceClock);
     }
 
     if (gst_element_set_state(pipeline, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {

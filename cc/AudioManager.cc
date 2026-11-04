@@ -12,6 +12,7 @@ GstAudioEngine::Config AudioManager::makeEngineConfig(const YAML::Node& audioMix
     config.voices = audioMixerConfig["mixer_channels"].as<int>(32);
     config.sink = audioMixerConfig["gst_sink"].as<std::string>("autoaudiosink");
     config.mixerLatencyMs = audioMixerConfig["gst_mixer_latency_ms"].as<int>(10);
+    config.useSinkClock = audioMixerConfig["gst_use_sink_clock"].as<bool>(true);
     config.verbose = verbose;
     return config;
 }

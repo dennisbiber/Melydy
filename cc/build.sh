@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # GStreamer compile/link flags (from libgstreamer1.0-dev / libgstreamer-plugins-base1.0-dev)
-GST_CFLAGS=$(pkg-config --cflags gstreamer-1.0 gstreamer-app-1.0 gstreamer-base-1.0) || { echo "Blimey! GStreamer dev packages not found!"; exit 1; }
-GST_LIBS=$(pkg-config --libs gstreamer-1.0 gstreamer-app-1.0 gstreamer-base-1.0)
+GST_CFLAGS=$(pkg-config --cflags gstreamer-1.0 gstreamer-app-1.0 gstreamer-base-1.0 gstreamer-audio-1.0) || { echo "Blimey! GStreamer dev packages not found!"; exit 1; }
+GST_LIBS=$(pkg-config --libs gstreamer-1.0 gstreamer-app-1.0 gstreamer-base-1.0 gstreamer-audio-1.0)
 
 # Function to compile individual source files
 compile_source() {

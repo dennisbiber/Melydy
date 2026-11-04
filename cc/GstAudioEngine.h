@@ -39,6 +39,7 @@ public:
         int voices = 32;                         // like SDL_mixer's channel count
         std::string sink = "autoaudiosink";      // any gst-launch sink description
         int mixerLatencyMs = 10;                 // how long audiomixer waits for late data
+        bool useSinkClock = true;                // audio device's clock drives everything
         bool verbose = false;
     };
 

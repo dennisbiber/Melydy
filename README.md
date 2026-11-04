@@ -33,7 +33,8 @@ How a sound is played now:
 1. The beat grid is pipeline running time: division `k` is at `k * (60 / bpm / beatDivisions)`.
 2. `MasterClock` runs each batch `scheduler_lookahead_ms` *before* its grid time and exposes that grid time as `getTickTime()`.
 3. `AudioPlayer::playAt(tickTime)` pushes the decoded sample into a free `appsrc` voice with `PTS = tickTime`.
-4. `audiomixer` places the buffer at the exact sample for that PTS, and the audio sink is the pipeline clock, so the scheduler and the sound card share one clock.
+4. `audiomixer` places the buffer at the exact sample for that PTS.
+5. The audio sink's own clock (e.g. `GstPulseSinkClock`) is made the pipeline clock, so the scheduler, the mixer and the speakers all run on the sound card's time. GStreamer doesn't do this by itself for live pipelines: it picks `GstSystemClock` and makes the sink keep correcting itself against it. On PipeWire with Bluetooth, that made the sink discard every buffer as late, so the mixer had sound and the speakers were silent. Sinks without a clock (file sinks) fall back to the system clock.
 
 Timing bugs this fixes:
 * **Loop drift.** Loops used to reschedule from the moment the thread woke up (`now + interval`), so every wake-up delay was added to every later repeat. They now reschedule from the previous tick (`tick + interval`).
@@ -81,6 +82,7 @@ audioMixer:
   gst_sink: "autoaudiosink"       # optional; e.g. "alsasink device=hw:0 buffer-time=20000 latency-time=5000"
   gst_mixer_latency_ms: 10        # optional; how long audiomixer waits for late buffers
   scheduler_lookahead_ms: 30      # optional; how far ahead of each tick the scheduler runs
+  gst_use_sink_clock: true        # optional; run everything on the audio device's clock (see below)
   # mixer_buffer_size and audio_format are ignored now (kept so old configs still load)
 ```
 

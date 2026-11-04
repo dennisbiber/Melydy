@@ -31,9 +31,9 @@ struct StreamClock {
 
     static time_point now();
 
-    // Block until the clock reaches t. Uses gst_clock_id_wait() on the
-    // pipeline clock when attached, so we sleep against the audio device's
-    // time rather than the CPU's.
+    // Block until the clock reaches t, or at most 20 ms (call again if
+    // now() < t). Uses gst_clock_id_wait() on the pipeline clock when
+    // attached, so we sleep against the audio device's time, not the CPU's.
     static void sleepUntil(time_point t);
 
     // Called by GstAudioEngine once the pipeline is PLAYING.

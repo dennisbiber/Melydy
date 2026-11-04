@@ -6,8 +6,8 @@ cd "$(dirname "$0")"
 SECONDS_TO_RUN=${1:-30}
 WORK=$(mktemp -d)
 
-GST_CFLAGS=$(pkg-config --cflags gstreamer-1.0 gstreamer-app-1.0)
-GST_LIBS=$(pkg-config --libs gstreamer-1.0 gstreamer-app-1.0)
+GST_CFLAGS=$(pkg-config --cflags gstreamer-1.0 gstreamer-app-1.0 gstreamer-base-1.0)
+GST_LIBS=$(pkg-config --libs gstreamer-1.0 gstreamer-app-1.0 gstreamer-base-1.0)
 g++ -O2 $GST_CFLAGS -o "$WORK/timing_test" timing_test.cc \
     ../MasterClock.cc ../BatchActions.cc ../ScheduleAction.cc ../AudioLooper.cc \
     ../AudioPlayer.cc ../AudioProcessor.cc ../GstAudioEngine.cc ../StreamClock.cc \

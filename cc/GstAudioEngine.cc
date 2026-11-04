@@ -3,6 +3,7 @@
 #include <gst/gst.h>
 #include <gst/app/gstappsink.h>
 #include <gst/app/gstappsrc.h>
+#include <gst/base/gstbasesink.h>
 #include <cstdio>
 #include <cstring>
 
@@ -168,6 +169,36 @@ bool GstAudioEngine::start() {
     printf("   GstAudioEngine::start::Playing. Clock: %s, voices: %d, pipeline latency: %.1f ms\n",
         GST_OBJECT_NAME(clock), config.voices,
         std::chrono::duration<double, std::milli>(pipelineLatency).count());
+
+    // Say which output device element is really in use. autoaudiosink picks
+    // one at runtime (pulsesink, pipewiresink, alsasink, ...) and quietly
+    // falls back to another if the first can't connect, which can leave you
+    // "playing" into an output nobody hears.
+    GstIterator* it = gst_bin_iterate_recurse(GST_BIN(pipeline));
+    GValue item = G_VALUE_INIT;
+    while (gst_iterator_next(it, &item) == GST_ITERATOR_OK) {
+        GstElement* element = GST_ELEMENT(g_value_get_object(&item));
+        if (GST_IS_BASE_SINK(element) && !GST_IS_BIN(element)) {
+            GstElementFactory* factory = gst_element_get_factory(element);
+            std::string device;
+            if (g_object_class_find_property(G_OBJECT_GET_CLASS(element), "device")) {
+                gchar* value = nullptr;
+                g_object_get(element, "device", &value, nullptr);
+                if (value) { device = value; g_free(value); }
+            }
+            const char* factoryName = factory ? GST_OBJECT_NAME(factory) : GST_OBJECT_NAME(element);
+            printf("   GstAudioEngine::start::Audio output: %s%s%s\n", factoryName,
+                device.empty() ? "" : " device=", device.c_str());
+            if (std::strcmp(factoryName, "fakesink") == 0) {
+                printf("   ---GstAudioEngine::start::NO AUDIO DEVICE: autoaudiosink couldn't open any real output and\n"
+                       "      fell back to fakesink, which discards all audio. Check that PulseAudio/PipeWire is running\n"
+                       "      (pactl info), or set audioMixer.gst_sink to e.g. \"alsasink device=hw:0\" or \"pulsesink\".\n");
+            }
+        }
+        g_value_reset(&item);
+    }
+    g_value_unset(&item);
+    gst_iterator_free(it);
     gst_object_unref(clock);
     running = true;
     return true;

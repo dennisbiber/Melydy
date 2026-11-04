@@ -10,7 +10,7 @@ audioMixer:
   mixer_channels: 32  # simultaneous sounds (GStreamer voices)
   # Default output is autoaudiosink. For Bluetooth output, which needs a
   # deeper buffer, uncomment:
-  # gst_sink: "pulsesink buffer-time=400000 latency-time=20000"
+  gst_sink: "pulsesink buffer-time=400000 latency-time=20000"
 bpm: 120.0
 num_samples: 200
 beatDivisions: 2.0

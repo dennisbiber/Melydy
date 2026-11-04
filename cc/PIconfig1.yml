@@ -1,14 +1,15 @@
 audioMixer:
   mixer_buffer_size: 4048
+  gst_sink: "pulsesink buffer-time=400000 latency-time=20000"
   mixer_sample_rate: 48000
-  mixer_channels: 8
+  mixer_channels: 8  # simultaneous sounds (GStreamer voices)
   audio_format: 2 # 1 = WSL, 2 = PI
 bpm: 120.0
 num_samples: 200
-beatDivisions: 2.0
+beatDivisions: 8.0
 APM_notedata_retrieve_delay: 0
 window:
-  font: "/home/dbiber/FreeSans.ttf"
+  font: "/usr/share/fonts/truetype/freefont/FreeSans.ttf"  # apt-get install fonts-freefont-ttf
   fontSize: 24
   g1Width: 100
   g1Height: 200
@@ -49,7 +50,7 @@ verbosity:
     audioPlayerVerbose: false
 notes:
   fn08A#4:
-    filepath: "/home/dbiber/soundSamples/2023-08-08/chromatic/acidBassPluck1/acidBassPluck1_A#4.wav"
+    filepath: "/home/db/Music/Its_Ok.mp3"
     fnNumber: "fn08"
     keycode: 13
   fn08A#5:
@@ -93,7 +94,7 @@ notes:
     fnNumber: "fn08"
     keycode: 38
   fn08C4:
-    filepath: "/home/dbiber/soundSamples/2023-08-08/chromatic/acidBassPluck1/acidBassPluck1_C4.wav"
+    filepath: "/home/db/Downloads/C4.mp3"
     fnNumber: "fn08"
     keycode: 29
   fn08C5:
@@ -125,7 +126,7 @@ notes:
     fnNumber: "fn08"
     keycode: 39
   fn08D4:
-    filepath: "/home/dbiber/soundSamples/2023-08-08/chromatic/acidBassPluck1/acidBassPluck1_D4.wav"
+    filepath: "/home/db/Downloads/D4.mp3"
     fnNumber: "fn08"
     keycode: 27
   fn08D5:

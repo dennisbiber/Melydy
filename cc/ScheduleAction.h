@@ -5,7 +5,7 @@
 #include <string>
 #include <chrono> // Include the necessary header for Duration
 
-using Duration = std::chrono::high_resolution_clock::duration;
+#include "StreamClock.h"
 
 class ScheduleAction {
 public:

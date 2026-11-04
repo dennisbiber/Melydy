@@ -122,7 +122,8 @@ void KeyboardEvent::functionFetchReset() {
 }
 
 std::string KeyboardEvent::getFunctionState() {
-    return currentFunction;
+    std::lock_guard<std::mutex> lock(newFunctionMutex);
+    return currentFunction;  // returned by value, copied under the lock
 }
 
 void KeyboardEvent::setScancodeData(SDL_Scancode scancode) {
@@ -201,12 +202,15 @@ void KeyboardEvent::handleKeypadKey(SDL_Scancode scancode) {
 void KeyboardEvent::handleFunctionKey(SDL_Scancode scancode) {
     if (scancode >= 58 && scancode <= 69) {
         activeFNIndex = scancode - 58;
+        // Lock BEFORE writing: the scheduler thread reads currentFunction
+        // through getFunctionState(), and an unlocked std::string write
+        // can hand it a half-written string.
+        std::lock_guard<std::mutex> lock(newFunctionMutex);
         if (activeFNIndex <= 8) {
             currentFunction = "fn0" + std::to_string(activeFNIndex + 1);
         } else if (activeFNIndex >= 9 && activeFNIndex < 12) {
             currentFunction = "fn" + std::to_string(activeFNIndex + 1);
         }
-        std::lock_guard<std::mutex> lock(newFunctionMutex);
         newFunction = true;
         if (verbose) {
             printf("          KeyboardEvent::handleFunctionKeys::Setting New Function: %s.\n", currentFunction.c_str());
@@ -254,90 +258,95 @@ void KeyboardEvent::clearScancodeData() {
 }
 // THREAD SECTION
 // #################################################################################################
-void KeyboardEvent::handleKeyboardEvent() {
+// Handles one SDL event. Must be called from the main thread (the thread that
+// created the window): SDL only supports pumping events on that thread, and
+// doing it from a worker thread was what made the UI crash.
+void KeyboardEvent::processEvent(const SDL_Event& event) {
     bool superVerbose = false;
-    if (verbose) {
-        printf("       KeyboardEvent::handleKeyboardEvent::Initialized.\n");
+    if (verbose && timeVerbose) {
+        masterClock.startTimer("KeyboardEvent", true);
     }
+    SDL_Scancode theCode = event.key.keysym.scancode;
+    switch (event.type) {
+        case SDL_QUIT:
+            quit = true;  // window closed or Ctrl-C
+            break;
+        case SDL_KEYDOWN:
+            if (verbose && superVerbose) {
+                printf("       KeyboardEvent::handleKeyboardEvent::Event Loop.\n");
+            }
 
-    quit = false;
-    SDL_Event event;
-    while (!quit || !stopFlag) {
-        if (verbose && timeVerbose) {
-            masterClock.startTimer("KeyboardEvent", true);
-        }
-
-        // while (SDL_PollEvent(&event)) {
-        SDL_WaitEvent(&event);
-        SDL_Scancode theCode = event.key.keysym.scancode;
-        switch (event.type) {
-            case SDL_QUIT:
-                quit = true;
-                break;
-            case SDL_KEYDOWN:
-                if (verbose && superVerbose) {
-                    printf("       KeyboardEvent::handleKeyboardEvent::Event Loop.\n");
-                }
-
-                // Check if the scancode is a key in the pressedKeys map
-                if (event.key.repeat == 0) {
-                    std::lock_guard<std::mutex> lock(pressedKeysMutex);
-                    if (pressedKeys.find(theCode) != pressedKeys.end()) {
-                        if (!pressedKeys[theCode]) {
-                            pressedKeys[theCode] = currentKeyState[theCode] == SDL_PRESSED;;
-                            handleAlphaNumericKeyDown(theCode);
-                        }
-                    } else if (keypadPressedKeys.find(theCode) != keypadPressedKeys.end()) {
-                        if (!keypadPressedKeys[theCode]) {
-                            keypadPressedKeys[theCode] = currentKeyState[theCode] == SDL_PRESSED;;
-                            handleKeypadKey(theCode);
-                        }
-                    } else if (keypadCtrlPressedKeys.find(theCode) != keypadCtrlPressedKeys.end()) {
-                        if (!keypadCtrlPressedKeys[theCode]) {
-                            keypadCtrlPressedKeys[theCode] = currentKeyState[theCode] == SDL_PRESSED;;
-                            handleKeypadControls(theCode);
-                        }
-                    } else if (functionPressedKeys.find(theCode) != functionPressedKeys.end()) {
-                        if (!functionPressedKeys[theCode]) {
-                            functionPressedKeys[theCode] = currentKeyState[theCode] == SDL_PRESSED;;
-                            handleFunctionKey(theCode);
-                        }
-                    }
-                    break;
-                }
-            case SDL_KEYUP:
-                // std::cout << "Keypad scancode " << theCode << std::endl;
+            // Check if the scancode is a key in the pressedKeys map
+            if (event.key.repeat == 0) {
+                std::lock_guard<std::mutex> lock(pressedKeysMutex);
                 if (pressedKeys.find(theCode) != pressedKeys.end()) {
-                    std::lock_guard<std::mutex> lock(pressedKeysMutex);
-                    if (pressedKeys[theCode]) {
+                    if (!pressedKeys[theCode]) {
                         pressedKeys[theCode] = currentKeyState[theCode] == SDL_PRESSED;;
+                        handleAlphaNumericKeyDown(theCode);
                     }
                 } else if (keypadPressedKeys.find(theCode) != keypadPressedKeys.end()) {
-                    if (keypadPressedKeys[theCode]) {
+                    if (!keypadPressedKeys[theCode]) {
                         keypadPressedKeys[theCode] = currentKeyState[theCode] == SDL_PRESSED;;
                         handleKeypadKey(theCode);
                     }
                 } else if (keypadCtrlPressedKeys.find(theCode) != keypadCtrlPressedKeys.end()) {
-                    if (keypadCtrlPressedKeys[theCode]) {
-                        keypadCtrlPressedKeys[theCode]  = currentKeyState[theCode] == SDL_PRESSED;;
+                    if (!keypadCtrlPressedKeys[theCode]) {
+                        keypadCtrlPressedKeys[theCode] = currentKeyState[theCode] == SDL_PRESSED;;
                         handleKeypadControls(theCode);
                     }
                 } else if (functionPressedKeys.find(theCode) != functionPressedKeys.end()) {
-                    if (functionPressedKeys[theCode]) {
+                    if (!functionPressedKeys[theCode]) {
                         functionPressedKeys[theCode] = currentKeyState[theCode] == SDL_PRESSED;;
                         handleFunctionKey(theCode);
                     }
                 }
-                break;
-            // Handle other event types if needed
-            default:
-                break;
-        }
-        // }
+            }
+            break;  // was inside the if: key-repeat events fell through into SDL_KEYUP
+        case SDL_KEYUP:
+            // std::cout << "Keypad scancode " << theCode << std::endl;
+            if (pressedKeys.find(theCode) != pressedKeys.end()) {
+                std::lock_guard<std::mutex> lock(pressedKeysMutex);
+                if (pressedKeys[theCode]) {
+                    pressedKeys[theCode] = currentKeyState[theCode] == SDL_PRESSED;;
+                }
+            } else if (keypadPressedKeys.find(theCode) != keypadPressedKeys.end()) {
+                if (keypadPressedKeys[theCode]) {
+                    keypadPressedKeys[theCode] = currentKeyState[theCode] == SDL_PRESSED;;
+                    handleKeypadKey(theCode);
+                }
+            } else if (keypadCtrlPressedKeys.find(theCode) != keypadCtrlPressedKeys.end()) {
+                if (keypadCtrlPressedKeys[theCode]) {
+                    keypadCtrlPressedKeys[theCode]  = currentKeyState[theCode] == SDL_PRESSED;;
+                    handleKeypadControls(theCode);
+                }
+            } else if (functionPressedKeys.find(theCode) != functionPressedKeys.end()) {
+                if (functionPressedKeys[theCode]) {
+                    functionPressedKeys[theCode] = currentKeyState[theCode] == SDL_PRESSED;;
+                    handleFunctionKey(theCode);
+                }
+            }
+            break;
+        // Handle other event types if needed
+        default:
+            break;
+    }
+    if (verbose && timeVerbose) {
+        masterClock.startTimer("KeyboardEvent", false);
+        printf("        EventHandler Loop Complete::%s\n", masterClock.getDurationString("KeyboardEvent").c_str());
+    }
+}
 
-        if (verbose && timeVerbose) {
-            masterClock.startTimer("KeyboardEvent", false);
-            printf("        EventHandler Loop Complete::%s\n", masterClock.getDurationString("KeyboardEvent").c_str());
+bool KeyboardEvent::quitRequested() const {
+    return quit;
+}
+
+// Old threaded loop, kept for reference. Not started any more: see
+// Manager::runEventLoop(), which calls processEvent() on the main thread.
+void KeyboardEvent::handleKeyboardEvent() {
+    SDL_Event event;
+    while (!quit && !stopFlag) {
+        if (SDL_WaitEventTimeout(&event, 100)) {
+            processEvent(event);
         }
     }
     printf("      KeyboardEvent::Event Loop Exited.\n");

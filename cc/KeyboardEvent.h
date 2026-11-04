@@ -29,6 +29,8 @@ public:
     bool isScancodeDataEmpty();
     const std::unordered_set<SDL_Scancode>& getScancodeData();
     void handleKeyboardEvent();
+    void processEvent(const SDL_Event& event);
+    bool quitRequested() const;
     void stopHandlingEvents();
     void functionFetchReset();
     std::string getFunctionState();

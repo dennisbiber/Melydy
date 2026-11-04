@@ -70,8 +70,7 @@ void LooperManager::removeAudioLoopers(const std::string& keypadIDStr) {
     auto range = keypadIDToLoopers.equal_range(keypadIDStr);
     for (auto it = range.first; it != range.second; ++it) {
         if (it->second->checkIfLooping()) {
-            masterClock.removeBatchFromQueue(it->second->getIDTag());
-            it->second->stopLoop();
+            it->second->stopLoop();  // stopLoop removes the batch itself
         }
     }
     keypadIDToLoopers.erase(range.first, range.second);

@@ -8,8 +8,7 @@
 #include <string>
 #include "ScheduleAction.h"
 
-using Duration = std::chrono::high_resolution_clock::duration;
-using TimePoint = std::chrono::high_resolution_clock::time_point;
+#include "StreamClock.h"
 
 class BatchActions {
     public:

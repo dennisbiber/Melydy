@@ -26,10 +26,11 @@ Manager::Manager(MasterClock& mc,
         printf("   Manager::Constructor Entered.\n");
     }
     setNotesConfig();
-    mixerBufferSize = audioMixerConfig["mixer_buffer_size"].as<int>();
+    mixerBufferSize = audioMixerConfig["mixer_buffer_size"].as<int>(0);  // unused by the GStreamer engine; optional
     scheduleAudioLooperTask();
     scheduleAudioPlaybackTask();
-    startKeyboardThread();
+    // No keyboard thread any more: SDL events are pumped on the main thread
+    // in runEventLoop().
     scheduleupdateStates();
     // startAnimationThread();
     if (verbose) {
@@ -56,6 +57,8 @@ void Manager::setNotesConfig() {
     if (verbose) {
         printf("   Manager::setNotesConfig::Entered.\n");
     }
+    const size_t total = notesConfig.size();
+    size_t loaded = 0, failed = 0, index = 0;
     for (const auto& note : notesConfig) {
         NoteConfiguration config;
         config.noteName = note.first.as<std::string>();
@@ -63,8 +66,19 @@ void Manager::setNotesConfig() {
         std::string filepath = noteConfig["filepath"].as<std::string>();
         config.keycode = static_cast<SDL_Scancode>(noteConfig["keycode"].as<int>());
         config.functionAssignment = noteConfig["fnNumber"].as<std::string>();
-        audioManager.addAudioPlayer(filepath.c_str(), config);
+        if (audioManager.addAudioPlayer(filepath.c_str(), config)) {
+            ++loaded;
+        } else {
+            ++failed;
+        }
+        // Keep the window alive while loading: without this the window sits
+        // unserviced, shows a frozen copy of the desktop, and the OS offers
+        // to force-quit it.
+        ++index;
+        SDL_PumpEvents();
+        graphicManager.renderFrame("Loading samples " + std::to_string(index) + " / " + std::to_string(total));
     }
+    printf("   Manager::setNotesConfig::Loaded %zu of %zu samples (%zu failed).\n", loaded, total, failed);
 }
 
 void Manager::setFunction() {
@@ -121,6 +135,43 @@ void Manager::startAnimationThread() {
         printf("   Manager::startAnimationThread.\n");
     }
     graphicManager.startAnimationWindow();
+}
+
+void Manager::runEventLoop() {
+    SDL_Event event;
+    while (!keyboardEvent.quitRequested()) {
+        // Wake on any event, or every ~16 ms to redraw (~60 fps).
+        if (SDL_WaitEventTimeout(&event, 16)) {
+            keyboardEvent.processEvent(event);
+            while (SDL_PollEvent(&event)) {   // drain anything else queued
+                keyboardEvent.processEvent(event);
+            }
+        }
+        graphicManager.renderFrame(buildStatusLabel());
+    }
+    printf("   Manager::runEventLoop::Window closed.\n");
+}
+
+std::string Manager::buildStatusLabel() {
+    std::string label = "Melydy   " + keyboardEvent.getFunctionState() + "   loops:";
+    bool any = false;
+    for (int index = 1; index <= 9; index++) {
+        if (keyboardEvent.getKeypadStates(index - 1)) {
+            label += " KP" + std::to_string(index);
+            any = true;
+        }
+    }
+    if (!any) {
+        label += " none";
+    }
+    // Output meter: 10 bars = full scale. Bars appearing when you hit a key
+    // means sound is leaving the mixer.
+    int bars = static_cast<int>(audioManager.getOutputLevel() * 10.0f + 0.5f);
+    if (bars > 10) bars = 10;
+    label += "   out [" + std::string(bars, '|') + std::string(10 - bars, '.') + "]";
+    label += "   voices " + std::to_string(audioManager.getActiveVoices()) + "/" +
+        std::to_string(audioManager.getVoiceCount());
+    return label;
 }
 
 void Manager::startKeyboardThread() {

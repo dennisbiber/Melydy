@@ -21,6 +21,7 @@ class GraphicPlayer {
         GraphicPlayer(const YAML::Node& windowConfig, 
             bool verbose, bool superVerbose, bool timeVerbose);
         ~GraphicPlayer();
+        void renderFrame(const std::string& label);
         void startAnimationLoop();
         void stopAnimationLoopRunning();
         bool isAnimationLoopRunning();
@@ -43,6 +44,10 @@ class GraphicPlayer {
         // int noteHeight;
         int fontSize;
         std::string font;
+        SDL_Texture* labelTexture;
+        std::string currentLabel;
+        int labelWidth;
+        int labelHeight;
 };
 
 

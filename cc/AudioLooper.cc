@@ -4,6 +4,7 @@
 #include "AudioPlayer.h"
 #include <iostream>
 #include <vector>
+#include <atomic>
 #include <chrono>
 
 AudioLooper::AudioLooper(MasterClock& mc, AudioPlayer* player, double interval, bool verbose, 
@@ -11,8 +12,7 @@ AudioLooper::AudioLooper(MasterClock& mc, AudioPlayer* player, double interval, 
     loopInterval(interval), isLooping(false), masterClock(mc), 
     player(player), divisionDurationAsDuration(mc.fetchDivisionDurationAsDuration()),
     verbose(verbose), beatDivisions(mc.getBeatDivisions()),
-    intervalDuration(std::chrono::duration_cast<
-        std::chrono::high_resolution_clock::duration>(divisionDurationAsDuration * beatDivisions / loopInterval)),
+    intervalDuration(std::chrono::duration_cast<Duration>(divisionDurationAsDuration * beatDivisions / loopInterval)),
     keyID(keypadID) {
     fetchBPM();
     setIDTag();
@@ -56,7 +56,12 @@ void AudioLooper::fetchBPM() {
 }
 
 void AudioLooper::setIDTag() {
-    idTag = keyID + "_" + std::to_string(masterClock.getCurrentDivisonOfBeat());
+    // Tags must be unique per looper. "keypad_divisionOfBeat" collided when
+    // two loops were recorded on the same division of different beats, so
+    // removing one could remove the other's batch.
+    static std::atomic<unsigned> nextLooperNumber{0};
+    idTag = keyID + "_" + std::to_string(masterClock.getCurrentDivisonOfBeat()) +
+        "_" + std::to_string(nextLooperNumber++);
 }
 
 std::string AudioLooper::getIDTag() {
@@ -90,12 +95,16 @@ std::string AudioLooper::startLoop() {
         printf("         AudioLooper::startLoop::Entered.\n");
     }
     isLooping = true;
-    masterClock.addItemToBatchAtInterval([&]() {
-        this->player->playAudio(); // Call the function you want to execute
+    // Capture the player and clock by value. Capturing `this` let the batch
+    // call into a looper that LooperManager had already erased.
+    AudioPlayer* loopPlayer = player;
+    MasterClock* clock = &masterClock;
+    masterClock.addItemToBatchAtInterval([loopPlayer, clock]() {
+        loopPlayer->playAt(clock->getTickTime());  // the exact grid time of this repeat
     }, intervalDuration, idTag, true);
     return idTag;
 }
 // printf("FILEPATH: %s\n", player->getFilePath().c_str());
-// Assuming you have a variable called 'timeToWait' of type std::chrono::high_resolution_clock::duration
+// Assuming you have a variable called 'timeToWait' of type Duration
 // std::chrono::milliseconds timeToWait_ms = std::chrono::duration_cast<std::chrono::milliseconds>(timeToWait);
 // printf("Time to wait in milliseconds: %lld\n", timeToWait_ms.count());

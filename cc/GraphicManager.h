@@ -16,6 +16,7 @@ class GraphicManager {
         ~GraphicManager();
         void startAnimationWindow();
         void stopAnimationWindow();
+        void renderFrame(const std::string& label);
 
     private:
         GraphicProcessor graphicProcessor;

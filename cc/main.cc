@@ -92,8 +92,8 @@ std::string argumentHandler(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
-    // Set up the termination signal handler
-    signal(SIGINT, handleTermination);
+    // No SIGINT handler of our own: SDL turns Ctrl-C into an SDL_QUIT event,
+    // so Ctrl-C and closing the window both take the clean shutdown path.
     const std::string configFile = argumentHandler(argc, argv);
     YAML::Node config = YAML::LoadFile(configFile);
     
@@ -157,8 +157,9 @@ int main(int argc, char* argv[]) {
     if (mainVerbose) {
         printf("Main::Starting SDL Video, Audio, and Events.\n");
     }
-    // Intialize SDL and audio subsystem
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS) < 0) {
+    // Intialize SDL for video and keyboard events. Audio now goes through
+    // GStreamer (see GstAudioEngine), so SDL's audio subsystem isn't needed.
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
         printf("---SDL initialization failed: %s\n", SDL_GetError());
         return 1;
     }
@@ -168,7 +169,10 @@ int main(int argc, char* argv[]) {
 
     std::unique_ptr<Manager> manager(new Manager(masterClock, 
         stringBoolPairs, verbosity, notesConfig, windowConfig, audioMixerConfig, superVerbose, timeVerbose));
-    std::thread mainThread([&]() {
+    // The scheduler gets its own thread; the main thread runs SDL (events and
+    // drawing), since SDL requires that to happen on the thread that created
+    // the window.
+    std::thread schedulerThread([&]() {
         try {
             masterClock.executeScheduledBatches();
         } catch (const std::exception& e) {
@@ -177,9 +181,17 @@ int main(int argc, char* argv[]) {
             std::cerr << "An unknown exception occurred while running the MasterClock." << std::endl;
         }
     });
-    
-    mainThread.join();
+
+    manager->runEventLoop();   // returns when the window is closed / Ctrl-C
+
+    // The SDL event loop is gone, so SDL's Ctrl-C -> SDL_QUIT conversion no
+    // longer reaches anyone. Restore the default so Ctrl-C during shutdown
+    // actually terminates instead of being swallowed.
+    signal(SIGINT, SIG_DFL);
+
     masterClock.stop();
+    schedulerThread.join();
+    manager.reset();           // tears down the audio engine and window
 
     // Clean up SDL and other resources
     SDL_Quit();

@@ -39,9 +39,13 @@ GstBusSyncReply busSyncHandler(GstBus*, GstMessage* msg, gpointer) {
 // server, so its stream runs dry between hits, underflows, and loses the start
 // of the next hit while it resyncs. Turn GAP buffers back into real silence so
 // the device gets a continuous stream.
-GstPadProbeReturn clearGapProbe(GstPad*, GstPadProbeInfo* info, gpointer) {
+GstPadProbeReturn clearGapProbe(GstPad*, GstPadProbeInfo* info, gpointer userData) {
+    auto* meter = static_cast<GstAudioEngine::OutputMeter*>(userData);
     GstBuffer* buffer = GST_PAD_PROBE_INFO_BUFFER(info);
-    if (buffer != nullptr && GST_BUFFER_FLAG_IS_SET(buffer, GST_BUFFER_FLAG_GAP)) {
+    if (buffer == nullptr) {
+        return GST_PAD_PROBE_OK;
+    }
+    if (GST_BUFFER_FLAG_IS_SET(buffer, GST_BUFFER_FLAG_GAP)) {
         buffer = gst_buffer_make_writable(buffer);
         GstMapInfo map;
         if (gst_buffer_map(buffer, &map, GST_MAP_WRITE)) {
@@ -50,6 +54,21 @@ GstPadProbeReturn clearGapProbe(GstPad*, GstPadProbeInfo* info, gpointer) {
         }
         GST_BUFFER_FLAG_UNSET(buffer, GST_BUFFER_FLAG_GAP);
         GST_PAD_PROBE_INFO_DATA(info) = buffer;
+        meter->decay();
+        return GST_PAD_PROBE_OK;
+    }
+    // Real audio: measure its peak so "is sound leaving the mixer?" has an
+    // answer without guessing (shown in the window and at shutdown).
+    GstMapInfo map;
+    if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
+        const float* samples = reinterpret_cast<const float*>(map.data);
+        float peak = 0.0f;
+        for (size_t i = 0; i < map.size / sizeof(float); ++i) {
+            float v = samples[i] < 0 ? -samples[i] : samples[i];
+            if (v > peak) peak = v;
+        }
+        gst_buffer_unmap(buffer, &map);
+        meter->record(peak);
     }
     return GST_PAD_PROBE_OK;
 }
@@ -126,7 +145,7 @@ bool GstAudioEngine::start() {
 
     GstElement* mixer = gst_bin_get_by_name(GST_BIN(pipeline), "mix");
     GstPad* mixerSrc = gst_element_get_static_pad(mixer, "src");
-    gst_pad_add_probe(mixerSrc, GST_PAD_PROBE_TYPE_BUFFER, clearGapProbe, nullptr, nullptr);
+    gst_pad_add_probe(mixerSrc, GST_PAD_PROBE_TYPE_BUFFER, clearGapProbe, &outputMeter, nullptr);
     gst_object_unref(mixerSrc);
     gst_object_unref(mixer);
 
@@ -230,6 +249,9 @@ void GstAudioEngine::shutdown() {
         gst_object_unref(bus);
     }
     if (running) {
+        printf("   GstAudioEngine::shutdown::Mixer output: %llu buffers with sound, loudest peak %.3f "
+               "(0 = nothing ever reached the output device)\n",
+            static_cast<unsigned long long>(outputMeter.audibleBuffers.load()), outputMeter.maxPeak.load());
         if (lateHits || droppedHits) {
             printf("   GstAudioEngine::shutdown::Late hits: %llu, dropped hits (no free voice): %llu\n",
                 static_cast<unsigned long long>(lateHits), static_cast<unsigned long long>(droppedHits));

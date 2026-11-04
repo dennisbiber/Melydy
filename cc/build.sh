@@ -66,6 +66,16 @@ check_md5sum() {
     return 1
 }
 
+# The per-file checks below only notice a change to a file's OWN .cc/.h, not
+# to headers it includes. Rebuilding against a changed header with stale
+# objects produces memory corruption at runtime, so if ANY header changed,
+# throw away all the cached checksums and rebuild everything.
+HEADERS_MD5=$(cat *.h | md5sum | awk '{print $1}')
+if [ ! -f headers.all.md5 ] || [ "$(cat headers.all.md5)" != "$HEADERS_MD5" ]; then
+    echo "Headers changed, rebuildin' the lot, mate!"
+    rm -f *.cc.md5 *.h.md5
+fi
+
 # Compile source files and headers if necessary
 if ! check_md5sum StreamClock.cc || ! check_md5sum StreamClock.h; then
     compile_source StreamClock.cc
@@ -161,6 +171,8 @@ if ! check_md5sum main.cc; then
     compile_source main.cc
     get_md5sum main.cc > main.cc.md5
 fi
+
+echo "$HEADERS_MD5" > headers.all.md5
 
 # Link object files to create the executable
 link_objects

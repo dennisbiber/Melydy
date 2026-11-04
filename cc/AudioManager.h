@@ -28,6 +28,7 @@ class AudioManager {
         void unschedulePlayback();
         void setCurrentFunction(std::string function);
         void setKeypadReady(bool stateUpdate);
+        float getOutputLevel() const { return engine.getOutputLevel(); }
 
     private:
         // FUNCTIONS

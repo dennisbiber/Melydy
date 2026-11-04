@@ -23,6 +23,7 @@
 #define GST_AUDIO_ENGINE_H
 
 #include "StreamClock.h"
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -59,6 +60,23 @@ public:
     // "no free channels" case).
     bool scheduleAt(const SampleData& samples, TimePoint when);
 
+    // Peak level of the mixed output, updated from GStreamer's streaming
+    // thread, read by the UI. Decays toward 0 during silence.
+    struct OutputMeter {
+        std::atomic<float> level{0.0f};
+        std::atomic<float> maxPeak{0.0f};
+        std::atomic<unsigned long long> audibleBuffers{0};
+        void record(float peak) {
+            if (peak > 0.0001f) {
+                ++audibleBuffers;
+            }
+            if (peak > maxPeak.load()) maxPeak.store(peak);
+            if (peak > level.load()) level.store(peak); else decay();
+        }
+        void decay() { level.store(level.load() * 0.9f); }
+    };
+    float getOutputLevel() const { return outputMeter.level.load(); }
+
     int getSampleRate() const { return config.sampleRate; }
     Duration getPipelineLatency() const { return pipelineLatency; }
 
@@ -76,6 +94,7 @@ private:
     bool running = false;
     uint64_t lateHits = 0;
     uint64_t droppedHits = 0;
+    OutputMeter outputMeter;
 };
 
 #endif // GST_AUDIO_ENGINE_H

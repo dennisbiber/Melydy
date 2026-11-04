@@ -164,6 +164,11 @@ std::string Manager::buildStatusLabel() {
     if (!any) {
         label += " none";
     }
+    // Output meter: 10 bars = full scale. Bars appearing when you hit a key
+    // means sound is leaving the mixer.
+    int bars = static_cast<int>(audioManager.getOutputLevel() * 10.0f + 0.5f);
+    if (bars > 10) bars = 10;
+    label += "   out [" + std::string(bars, '|') + std::string(10 - bars, '.') + "]";
     return label;
 }
 

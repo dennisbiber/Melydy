@@ -11,8 +11,8 @@ Manager::Manager(MasterClock& mc,
     const YAML::Node& verbosity,
     const YAML::Node& notesConfig, const YAML::Node& windowConfig,
     const YAML::Node& audioMixerConfig,
-    bool sV, bool tV) :
-    masterClock(mc), currentFunction("FN10"),
+    bool sV, bool tV, const std::string& configDir) :
+    masterClock(mc), currentFunction("FN10"), configDir(configDir),
     verbose(verbosity["managerVerbose"].as<bool>()),
     stringBoolPairs(stringBoolPairs), notesConfig(notesConfig),
     keyboardEvent(masterClock, verbosity["keyboardEventVerbose"].as<bool>(), tV, sV),
@@ -58,7 +58,7 @@ void Manager::setNotesConfig() {
         printf("   Manager::setNotesConfig::Entered.\n");
     }
     const size_t total = notesConfig.size();
-    size_t loaded = 0, failed = 0, index = 0;
+    size_t loaded = 0, failed = 0, unassigned = 0, index = 0;
     for (const auto& note : notesConfig) {
         NoteConfiguration config;
         config.noteName = note.first.as<std::string>();
@@ -66,6 +66,16 @@ void Manager::setNotesConfig() {
         std::string filepath = noteConfig["filepath"].as<std::string>();
         config.keycode = static_cast<SDL_Scancode>(noteConfig["keycode"].as<int>());
         config.functionAssignment = noteConfig["fnNumber"].as<std::string>();
+        ++index;
+        if (filepath.empty()) {
+            ++unassigned;   // key exists in the layout but has no sample yet
+            continue;
+        }
+        // Relative paths are relative to the config file, not to wherever
+        // the program was launched from, so config + samples can move together.
+        if (filepath[0] != '/') {
+            filepath = configDir + "/" + filepath;
+        }
         if (audioManager.addAudioPlayer(filepath.c_str(), config)) {
             ++loaded;
         } else {
@@ -74,11 +84,11 @@ void Manager::setNotesConfig() {
         // Keep the window alive while loading: without this the window sits
         // unserviced, shows a frozen copy of the desktop, and the OS offers
         // to force-quit it.
-        ++index;
         SDL_PumpEvents();
         graphicManager.renderFrame("Loading samples " + std::to_string(index) + " / " + std::to_string(total));
     }
-    printf("   Manager::setNotesConfig::Loaded %zu of %zu samples (%zu failed).\n", loaded, total, failed);
+    printf("   Manager::setNotesConfig::Loaded %zu samples (%zu failed, %zu keys unassigned).\n",
+        loaded, failed, unassigned);
 }
 
 void Manager::setFunction() {

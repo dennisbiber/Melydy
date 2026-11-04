@@ -18,7 +18,7 @@ AudioLooper::AudioLooper(MasterClock& mc, AudioPlayer* player, double interval, 
     setIDTag();
     if (verbose) {
         auto millisecondsIntervalDuration = std::chrono::duration_cast<std::chrono::milliseconds>(intervalDuration).count();
-        printf("         AudioLooper:AudioLooper::Interval Duration = %lld ms.\n", millisecondsIntervalDuration);
+        printf("         AudioLooper:AudioLooper::Interval Duration = %lld ms.\n", static_cast<long long>(millisecondsIntervalDuration));
         printf("         AudioLooper::AudioLooper::Constructed.\n");
     }
 }

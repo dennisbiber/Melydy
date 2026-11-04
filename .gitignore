@@ -3,3 +3,5 @@
 cc/audio_player
 cc/mapping
 duration_logs_*.txt
+cc/samples/
+*.part

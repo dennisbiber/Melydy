@@ -1,0 +1,1232 @@
+# Melydy config. Run ./install.sh first: it downloads the piano samples for
+# bank fn10 into samples/piano/ and fills in their paths below.
+#
+# Banks fn06-fn12 (switch with F6-F12; fn10 is active at startup) all keep
+# their key layout. Entries with filepath: "" are unassigned: the key exists
+# but plays nothing until you give it a sample. Relative paths are relative
+# to this file's folder.
+audioMixer:
+  mixer_sample_rate: 48000
+  mixer_channels: 32  # simultaneous sounds (GStreamer voices)
+  # Default output is autoaudiosink. For Bluetooth output, which needs a
+  # deeper buffer, uncomment:
+  # gst_sink: "pulsesink buffer-time=400000 latency-time=20000"
+bpm: 120.0
+num_samples: 200
+beatDivisions: 2.0
+APM_notedata_retrieve_delay: 0
+window:
+  font: "/usr/share/fonts/truetype/freefont/FreeSans.ttf"  # apt-get install fonts-freefont-ttf
+  fontSize: 24
+  g1Width: 100
+  g1Height: 200
+  g2Width: 100
+  g2Height: 400
+  p2Width: 300
+  p2Height: 400
+  noteWidth: 200
+  noteHeight: 400
+kp1LoopDuration: 16.0 #4 bars
+kp2LoopDuration: 8.0 #2 bars
+kp3LoopDuration: 8.0 #4 beats
+kp4LoopDuration: 4.0 #2 beats
+kp5LoopDuration: 4.0
+kp6LoopDuration: 2.0
+kp7LoopDuration: 2.0
+kp8LoopDuration: 1.0
+kp9LoopDuration: 1.0
+verbosity:
+  timeVerbose: true
+  superVerbose: true
+  mainVerbose: false
+  masterClockVerbose: false
+  keyboardEventVerbose: false
+  # Management
+  managerVerbose: true
+  looperVerbosity:
+    looperManagerVerbose: false
+    audioLooperVerbose: false
+    graphicLooperVerbose: false
+  graphicVerbosity:
+    graphicManagerVerbose: false
+    graphicProcessorVerbose: false
+    graphicPlayerVerbose: false
+  audioVerbosity:
+    audioManagerVerbose: false
+    audioProcessorVerbose: false
+    audioPlayerVerbose: false
+notes:
+  fn08A#4:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 13
+  fn08A#5:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 36
+  fn08A4:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 17
+  fn08A5:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 28
+  fn08A6:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 49
+  fn08B4:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 16
+  fn08B5:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 24
+  fn08C#4:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 22
+  fn08C#5:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 15
+  fn08C#5D:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 31
+  fn08C#6:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 38
+  fn08C4:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 29
+  fn08C5:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 54
+  fn08C5D:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 20
+  fn08C6:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 12
+  fn08D#4:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 7
+  fn08D#5:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 51
+  fn08D#5D:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 32
+  fn08D#6:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 39
+  fn08D4:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 27
+  fn08D5:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 55
+  fn08D5D:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 26
+  fn08D6:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 18
+  fn08E4:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 6
+  fn08E5:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 56
+  fn08E5D:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 8
+  fn08E6:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 19
+  fn08F#4:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 10
+  fn08F#5:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 40
+  fn08F#5D:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 34
+  fn08F#6:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 46
+  fn08F4:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 25
+  fn08F5:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 229
+  fn08F5D:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 21
+  fn08F6:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 47
+  fn08G#4:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 11
+  fn08G#5:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 35
+  fn08G#6:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 42
+  fn08G4:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 5
+  fn08G5:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 23
+  fn08G6:
+    filepath: ""
+    fnNumber: "fn08"
+    keycode: 48
+  fn09A#4:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 13
+  fn09A#5:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 36
+  fn09A4:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 17
+  fn09A5:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 28
+  fn09A6:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 49
+  fn09B4:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 16
+  fn09B5:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 24
+  fn09C#4:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 22
+  fn09C#5:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 15
+  fn09C#5D:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 31
+  fn09C#6:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 38
+  fn09C4:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 29
+  fn09C5:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 54
+  fn09C5D:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 20
+  fn09C6:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 12
+  fn09D#4:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 7
+  fn09D#5:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 51
+  fn09D#5D:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 32
+  fn09D#6:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 39
+  fn09D4:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 27
+  fn09D5:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 55
+  fn09D5D:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 26
+  fn09D6:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 18
+  fn09E4:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 6
+  fn09E5:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 56
+  fn09E5D:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 8
+  fn09E6:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 19
+  fn09F#4:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 10
+  fn09F#5:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 40
+  fn09F#5D:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 34
+  fn09F#6:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 46
+  fn09F4:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 25
+  fn09F5:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 229
+  fn09F5D:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 21
+  fn09F6:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 47
+  fn09G#4:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 11
+  fn09G#5:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 35
+  fn09G#6:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 42
+  fn09G4:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 5
+  fn09G5:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 23
+  fn09G6:
+    filepath: ""
+    fnNumber: "fn09"
+    keycode: 48
+  fn10A#4:
+    filepath: "samples/piano/Bb4.mp3"
+    fnNumber: "fn10"
+    keycode: 13
+  fn10A#5:
+    filepath: "samples/piano/Bb5.mp3"
+    fnNumber: "fn10"
+    keycode: 36
+  fn10A4:
+    filepath: "samples/piano/A4.mp3"
+    fnNumber: "fn10"
+    keycode: 17
+  fn10A5:
+    filepath: "samples/piano/A5.mp3"
+    fnNumber: "fn10"
+    keycode: 28
+  fn10A6:
+    filepath: "samples/piano/A6.mp3"
+    fnNumber: "fn10"
+    keycode: 49
+  fn10B4:
+    filepath: "samples/piano/B4.mp3"
+    fnNumber: "fn10"
+    keycode: 16
+  fn10B5:
+    filepath: "samples/piano/B5.mp3"
+    fnNumber: "fn10"
+    keycode: 24
+  fn10C#4:
+    filepath: "samples/piano/Db4.mp3"
+    fnNumber: "fn10"
+    keycode: 22
+  fn10C#5:
+    filepath: "samples/piano/Db5.mp3"
+    fnNumber: "fn10"
+    keycode: 15
+  fn10C#5D:
+    filepath: "samples/piano/Db5.mp3"
+    fnNumber: "fn10"
+    keycode: 31
+  fn10C#6:
+    filepath: "samples/piano/Db6.mp3"
+    fnNumber: "fn10"
+    keycode: 38
+  fn10C4:
+    filepath: "samples/piano/C4.mp3"
+    fnNumber: "fn10"
+    keycode: 29
+  fn10C5:
+    filepath: "samples/piano/C5.mp3"
+    fnNumber: "fn10"
+    keycode: 54
+  fn10C5D:
+    filepath: "samples/piano/C5.mp3"
+    fnNumber: "fn10"
+    keycode: 20
+  fn10C6:
+    filepath: "samples/piano/C6.mp3"
+    fnNumber: "fn10"
+    keycode: 12
+  fn10D#4:
+    filepath: "samples/piano/Eb4.mp3"
+    fnNumber: "fn10"
+    keycode: 7
+  fn10D#5:
+    filepath: "samples/piano/Eb5.mp3"
+    fnNumber: "fn10"
+    keycode: 51
+  fn10D#5D:
+    filepath: "samples/piano/Eb5.mp3"
+    fnNumber: "fn10"
+    keycode: 32
+  fn10D#6:
+    filepath: "samples/piano/Eb6.mp3"
+    fnNumber: "fn10"
+    keycode: 39
+  fn10D4:
+    filepath: "samples/piano/D4.mp3"
+    fnNumber: "fn10"
+    keycode: 27
+  fn10D5:
+    filepath: "samples/piano/D5.mp3"
+    fnNumber: "fn10"
+    keycode: 55
+  fn10D5D:
+    filepath: "samples/piano/D5.mp3"
+    fnNumber: "fn10"
+    keycode: 26
+  fn10D6:
+    filepath: "samples/piano/D6.mp3"
+    fnNumber: "fn10"
+    keycode: 18
+  fn10E4:
+    filepath: "samples/piano/E4.mp3"
+    fnNumber: "fn10"
+    keycode: 6
+  fn10E5:
+    filepath: "samples/piano/E5.mp3"
+    fnNumber: "fn10"
+    keycode: 56
+  fn10E5D:
+    filepath: "samples/piano/E5.mp3"
+    fnNumber: "fn10"
+    keycode: 8
+  fn10E6:
+    filepath: "samples/piano/E6.mp3"
+    fnNumber: "fn10"
+    keycode: 19
+  fn10F#4:
+    filepath: "samples/piano/Gb4.mp3"
+    fnNumber: "fn10"
+    keycode: 10
+  fn10F#5:
+    filepath: "samples/piano/Gb5.mp3"
+    fnNumber: "fn10"
+    keycode: 40
+  fn10F#5D:
+    filepath: "samples/piano/Gb5.mp3"
+    fnNumber: "fn10"
+    keycode: 34
+  fn10F#6:
+    filepath: "samples/piano/Gb6.mp3"
+    fnNumber: "fn10"
+    keycode: 46
+  fn10F4:
+    filepath: "samples/piano/F4.mp3"
+    fnNumber: "fn10"
+    keycode: 25
+  fn10F5:
+    filepath: "samples/piano/F5.mp3"
+    fnNumber: "fn10"
+    keycode: 229
+  fn10F5D:
+    filepath: "samples/piano/F5.mp3"
+    fnNumber: "fn10"
+    keycode: 21
+  fn10F6:
+    filepath: "samples/piano/F6.mp3"
+    fnNumber: "fn10"
+    keycode: 47
+  fn10G#4:
+    filepath: "samples/piano/Ab4.mp3"
+    fnNumber: "fn10"
+    keycode: 11
+  fn10G#5:
+    filepath: "samples/piano/Ab5.mp3"
+    fnNumber: "fn10"
+    keycode: 35
+  fn10G#6:
+    filepath: "samples/piano/Ab6.mp3"
+    fnNumber: "fn10"
+    keycode: 42
+  fn10G4:
+    filepath: "samples/piano/G4.mp3"
+    fnNumber: "fn10"
+    keycode: 5
+  fn10G5:
+    filepath: "samples/piano/G5.mp3"
+    fnNumber: "fn10"
+    keycode: 23
+  fn10G6:
+    filepath: "samples/piano/G6.mp3"
+    fnNumber: "fn10"
+    keycode: 48
+  fn11A#4:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 13
+  fn11A#5:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 36
+  fn11A4:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 17
+  fn11A5:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 28
+  fn11A6:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 49
+  fn11B4:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 16
+  fn11B5:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 24
+  fn11C#4:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 22
+  fn11C#5:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 15
+  fn11C#5D:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 31
+  fn11C#6:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 38
+  fn11C4:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 29
+  fn11C5:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 54
+  fn11C5D:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 20
+  fn11C6:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 12
+  fn11D#4:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 7
+  fn11D#5:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 51
+  fn11D#5D:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 32
+  fn11D#6:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 39
+  fn11D4:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 27
+  fn11D5:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 55
+  fn11D5D:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 26
+  fn11D6:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 18
+  fn11E4:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 6
+  fn11E5:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 56
+  fn11E5D:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 8
+  fn11E6:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 19
+  fn11F#4:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 10
+  fn11F#5:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 40
+  fn11F#5D:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 34
+  fn11F#6:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 46
+  fn11F4:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 25
+  fn11F5:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 229
+  fn11F5D:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 21
+  fn11F6:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 47
+  fn11G#4:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 11
+  fn11G#5:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 35
+  fn11G#6:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 42
+  fn11G4:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 5
+  fn11G5:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 23
+  fn11G6:
+    filepath: ""
+    fnNumber: "fn11"
+    keycode: 48
+  fn12A#4:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 13
+  fn12A#5:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 36
+  fn12A4:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 17
+  fn12A5:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 28
+  fn12A6:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 49
+  fn12B4:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 16
+  fn12B5:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 24
+  fn12C#4:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 22
+  fn12C#5:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 15
+  fn12C#5D:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 31
+  fn12C#6:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 38
+  fn12C4:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 29
+  fn12C5:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 54
+  fn12C5D:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 20
+  fn12C6:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 12
+  fn12D#4:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 7
+  fn12D#5:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 51
+  fn12D#5D:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 32
+  fn12D#6:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 39
+  fn12D4:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 27
+  fn12D5:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 55
+  fn12D5D:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 26
+  fn12D6:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 18
+  fn12E4:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 6
+  fn12E5:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 56
+  fn12E5D:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 8
+  fn12E6:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 19
+  fn12F#4:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 10
+  fn12F#5:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 40
+  fn12F#5D:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 34
+  fn12F#6:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 46
+  fn12F4:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 25
+  fn12F5:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 229
+  fn12F5D:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 21
+  fn12F6:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 47
+  fn12G#4:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 11
+  fn12G#5:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 35
+  fn12G#6:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 42
+  fn12G4:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 5
+  fn12G5:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 23
+  fn12G6:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 48
+  Hat1:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 224 # Left ctrl
+  Hat2:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 226 # Left alt
+  Clap1:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 230 # right alt
+  Snare1:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 228 # right ctrl
+  Kick1:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 44 # space
+  Kick2:
+    filepath: ""
+    fnNumber: "fn12"
+    keycode: 76 # delete
+  fn07A#4:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 13
+  fn07A#5:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 36
+  fn07A4:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 17
+  fn07A5:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 28
+  fn07A6:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 49
+  fn07B4:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 16
+  fn07B5:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 24
+  fn07C#4:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 22
+  fn07C#5:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 15
+  fn07C#5D:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 31
+  fn07C#6:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 38
+  fn07C4:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 29
+  fn07C5:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 54
+  fn07C5D:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 20
+  fn07C6:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 12
+  fn07D#4:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 7
+  fn07D#5:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 51
+  fn07D#5D:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 32
+  fn07D#6:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 39
+  fn07D4:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 27
+  fn07D5:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 55
+  fn07D5D:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 26
+  fn07D6:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 18
+  fn07E4:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 6
+  fn07E5:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 56
+  fn07E5D:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 8
+  fn07E6:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 19
+  fn07F#4:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 10
+  fn07F#5:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 40
+  fn07F#5D:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 34
+  fn07F#6:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 46
+  fn07F4:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 25
+  fn07F5:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 229
+  fn07F5D:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 21
+  fn07F6:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 47
+  fn07G#4:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 11
+  fn07G#5:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 35
+  fn07G#6:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 42
+  fn07G4:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 5
+  fn07G5:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 23
+  fn07G6:
+    filepath: ""
+    fnNumber: "fn07"
+    keycode: 48
+  fn06A#4:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 13
+  fn06A#5:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 36
+  fn06A4:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 17
+  fn06A5:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 28
+  fn06A6:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 49
+  fn06B4:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 16
+  fn06B5:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 24
+  fn06C#4:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 22
+  fn06C#5:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 15
+  fn06C#5D:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 31
+  fn06C#6:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 38
+  fn06C4:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 29
+  fn06C5:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 54
+  fn06C5D:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 20
+  fn06C6:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 12
+  fn06D#4:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 7
+  fn06D#5:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 51
+  fn06D#5D:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 32
+  fn06D#6:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 39
+  fn06D4:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 27
+  fn06D5:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 55
+  fn06D5D:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 26
+  fn06D6:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 18
+  fn06E4:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 6
+  fn06E5:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 56
+  fn06E5D:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 8
+  fn06E6:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 19
+  fn06F#4:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 10
+  fn06F#5:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 40
+  fn06F#5D:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 34
+  fn06F#6:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 46
+  fn06F4:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 25
+  fn06F5:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 229
+  fn06F5D:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 21
+  fn06F6:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 47
+  fn06G#4:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 11
+  fn06G#5:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 35
+  fn06G#6:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 42
+  fn06G4:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 5
+  fn06G5:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 23
+  fn06G6:
+    filepath: ""
+    fnNumber: "fn06"
+    keycode: 48
+
+

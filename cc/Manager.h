@@ -27,7 +27,7 @@ class Manager {
             const YAML::Node& verbosity,
             const YAML::Node& notesConfig, const YAML::Node& windowConfig,
             const YAML::Node& audioMixerConfig,
-            bool sV, bool tV);
+            bool sV, bool tV, const std::string& configDir = ".");
         ~Manager();
 
         void joinManagerThread();
@@ -64,6 +64,7 @@ class Manager {
         // Structures
         const std::unordered_map<std::string, std::pair<bool*, double>>& stringBoolPairs;
         const YAML::Node& notesConfig;
+        std::string configDir;   // relative sample paths are resolved from here
 };
 
 #endif // MANAGER_H

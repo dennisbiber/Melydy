@@ -58,6 +58,24 @@ Keypad keys are hold-to-arm. Hold `KP1`-`KP9` (loop length) plus `KP+` while pla
 ### Timing test
 `cc/tests/run_timing_test.sh [seconds]` runs the real `MasterClock`, `AudioLooper` and `AudioPlayer` code headless. It records to a WAV instead of the speakers and adds a random 0-20 ms of CPU load on every tick. `check_timing.py` then checks that every click landed on its scheduled sample.
 
+## Quick start
+
+```bash
+cd cc
+./install.sh --deps      # installs missing packages (sudo), downloads samples, builds
+./audio_player -c config1.yml
+```
+
+`install.sh` without `--deps` only checks dependencies and prints an `apt-get` command for anything missing.
+
+`install.sh` downloads the piano notes that bank **fn10** uses (active at startup; C4 to G6 across the letter keys, 34 mp3s, ~400 KB) from [fuhton/piano-mp3](https://github.com/fuhton/piano-mp3) into `cc/samples/piano/`. It then writes their paths into `config1.yml`. The samples are MIT-licensed by their author and are downloaded at install time, not stored in this repo. The other banks (fn06–fn12, switched with F6–F12) keep their key layout with empty `filepath: ""` entries, ready for your own samples. `python3 fetch_samples.py --bank fnNN` fills any bank with the same piano notes.
+
+Sample paths in the config can be absolute or relative to the config file.
+
+**Bluetooth output:** Bluetooth needs a deeper output buffer. If notes are silent over Bluetooth, uncomment the `gst_sink` line in `config1.yml`. `cc/tests/output_probe.sh` tests which settings get sound to your default output.
+
+## Building
+
 To build the proram, in the `/cc/` directory, the `build.sh` file will build all objects and link them into the `audio_player` object. It also
 will generate an executable ready to be called for runtime. `build.sh` only checks each file's own `.cc`/`.h` for changes, not the headers it includes, so run `cleanbuild.sh` first after pulling changes. The permissions will need set on the `build.sh` file to set it as executable.
 

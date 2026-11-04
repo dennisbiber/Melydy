@@ -96,6 +96,10 @@ int main(int argc, char* argv[]) {
     // so Ctrl-C and closing the window both take the clean shutdown path.
     const std::string configFile = argumentHandler(argc, argv);
     YAML::Node config = YAML::LoadFile(configFile);
+    std::string configDirectory = fs::path(configFile).parent_path().string();
+    if (configDirectory.empty()) {
+        configDirectory = ".";
+    }
     
     YAML::Node audioMixerConfig = config["audioMixer"];
     YAML::Node windowConfig = config["window"];
@@ -168,7 +172,8 @@ int main(int argc, char* argv[]) {
     }
 
     std::unique_ptr<Manager> manager(new Manager(masterClock, 
-        stringBoolPairs, verbosity, notesConfig, windowConfig, audioMixerConfig, superVerbose, timeVerbose));
+        stringBoolPairs, verbosity, notesConfig, windowConfig, audioMixerConfig, superVerbose, timeVerbose,
+        configDirectory));
     // The scheduler gets its own thread; the main thread runs SDL (events and
     // drawing), since SDL requires that to happen on the thread that created
     // the window.

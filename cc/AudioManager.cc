@@ -9,7 +9,7 @@ GstAudioEngine::Config AudioManager::makeEngineConfig(const YAML::Node& audioMix
     // engine always mixes in 32-bit float.
     GstAudioEngine::Config config;
     config.sampleRate = audioMixerConfig["mixer_sample_rate"].as<int>(48000);
-    config.voices = audioMixerConfig["mixer_channels"].as<int>(8);
+    config.voices = audioMixerConfig["mixer_channels"].as<int>(32);
     config.sink = audioMixerConfig["gst_sink"].as<std::string>("autoaudiosink");
     config.mixerLatencyMs = audioMixerConfig["gst_mixer_latency_ms"].as<int>(10);
     config.verbose = verbose;

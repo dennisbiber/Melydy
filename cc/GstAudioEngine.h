@@ -36,7 +36,7 @@ class GstAudioEngine {
 public:
     struct Config {
         int sampleRate = 48000;
-        int voices = 8;                          // like SDL_mixer's channel count
+        int voices = 32;                         // like SDL_mixer's channel count
         std::string sink = "autoaudiosink";      // any gst-launch sink description
         int mixerLatencyMs = 10;                 // how long audiomixer waits for late data
         bool verbose = false;
@@ -76,6 +76,8 @@ public:
         void decay() { level.store(level.load() * 0.9f); }
     };
     float getOutputLevel() const { return outputMeter.level.load(); }
+    int getActiveVoices();
+    int getVoiceCount() const { return config.voices; }
 
     int getSampleRate() const { return config.sampleRate; }
     Duration getPipelineLatency() const { return pipelineLatency; }

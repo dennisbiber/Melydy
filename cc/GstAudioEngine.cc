@@ -5,6 +5,7 @@
 #include <gst/app/gstappsrc.h>
 #include <gst/base/gstbasesink.h>
 #include <cstdio>
+#include <cmath>
 #include <cstring>
 
 namespace {
@@ -57,18 +58,27 @@ GstPadProbeReturn clearGapProbe(GstPad*, GstPadProbeInfo* info, gpointer userDat
         meter->decay();
         return GST_PAD_PROBE_OK;
     }
-    // Real audio: measure its peak so "is sound leaving the mixer?" has an
-    // answer without guessing (shown in the window and at shutdown).
+    // Real audio: measure its peak (shown in the window and at shutdown),
+    // then soft-limit it. Overlapping notes add up past 1.0, which hard-clips
+    // (distorts) at the sound card. Below 0.8 the signal is untouched; above
+    // it, it bends smoothly toward 1.0 instead of being chopped off.
+    buffer = gst_buffer_make_writable(buffer);
+    GST_PAD_PROBE_INFO_DATA(info) = buffer;
     GstMapInfo map;
-    if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
-        const float* samples = reinterpret_cast<const float*>(map.data);
+    if (gst_buffer_map(buffer, &map, GST_MAP_READWRITE)) {
+        float* samples = reinterpret_cast<float*>(map.data);
         float peak = 0.0f;
+        const float knee = 0.8f;
         for (size_t i = 0; i < map.size / sizeof(float); ++i) {
             float v = samples[i] < 0 ? -samples[i] : samples[i];
             if (v > peak) peak = v;
+            if (v > knee) {
+                float limited = knee + (1.0f - knee) * std::tanh((v - knee) / (1.0f - knee));
+                samples[i] = samples[i] < 0 ? -limited : limited;
+            }
         }
         gst_buffer_unmap(buffer, &map);
-        meter->record(peak);
+        meter->record(peak);   // pre-limiter peak: >1.0 means notes are stacking up
     }
     return GST_PAD_PROBE_OK;
 }
@@ -256,6 +266,11 @@ void GstAudioEngine::shutdown() {
             printf("   GstAudioEngine::shutdown::Late hits: %llu, dropped hits (no free voice): %llu\n",
                 static_cast<unsigned long long>(lateHits), static_cast<unsigned long long>(droppedHits));
         }
+        if (droppedHits) {
+            printf("   ---GstAudioEngine::shutdown::All %d voices were busy %llu time(s), so those key presses were\n"
+                   "      silent. Raise audioMixer.mixer_channels, or use shorter samples.\n",
+                config.voices, static_cast<unsigned long long>(droppedHits));
+        }
     }
     StreamClock::detach();
     gst_element_set_state(pipeline, GST_STATE_NULL);
@@ -345,6 +360,18 @@ std::vector<float> GstAudioEngine::decodeFile(const std::string& path) const {
     gst_object_unref(sink);
     gst_object_unref(decoder);
     return out;
+}
+
+int GstAudioEngine::getActiveVoices() {
+    std::lock_guard<std::mutex> lock(voicesMutex);
+    TimePoint now = StreamClock::now();
+    int active = 0;
+    for (const auto& voice : voices) {
+        if (voice.busyUntil > now) {
+            ++active;
+        }
+    }
+    return active;
 }
 
 bool GstAudioEngine::scheduleAt(const SampleData& samples, TimePoint when) {

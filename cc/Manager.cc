@@ -169,6 +169,8 @@ std::string Manager::buildStatusLabel() {
     int bars = static_cast<int>(audioManager.getOutputLevel() * 10.0f + 0.5f);
     if (bars > 10) bars = 10;
     label += "   out [" + std::string(bars, '|') + std::string(10 - bars, '.') + "]";
+    label += "   voices " + std::to_string(audioManager.getActiveVoices()) + "/" +
+        std::to_string(audioManager.getVoiceCount());
     return label;
 }
 

@@ -77,7 +77,7 @@ The "audio_player" program runs based entirely on configuration. All values are 
 ```
 audioMixer:
   mixer_sample_rate: 48000
-  mixer_channels: 8               # number of GStreamer voices (simultaneous sounds)
+  mixer_channels: 32              # number of GStreamer voices (simultaneous sounds)
   gst_sink: "autoaudiosink"       # optional; e.g. "alsasink device=hw:0 buffer-time=20000 latency-time=5000"
   gst_mixer_latency_ms: 10        # optional; how long audiomixer waits for late buffers
   scheduler_lookahead_ms: 30      # optional; how far ahead of each tick the scheduler runs

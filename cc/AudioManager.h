@@ -29,6 +29,8 @@ class AudioManager {
         void setCurrentFunction(std::string function);
         void setKeypadReady(bool stateUpdate);
         float getOutputLevel() const { return engine.getOutputLevel(); }
+        int getActiveVoices() { return engine.getActiveVoices(); }
+        int getVoiceCount() const { return engine.getVoiceCount(); }
 
     private:
         // FUNCTIONS

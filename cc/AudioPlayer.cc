@@ -1,4 +1,6 @@
 #include "AudioPlayer.h"
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <stdexcept>
 
@@ -10,10 +12,27 @@ AudioPlayer::AudioPlayer(bool verbose, const char* filepath, AudioProcessor& aud
         throw std::runtime_error("Failed to load audio file");
     }
     audioProcessor.normalizeAudioSamples(decoded.data(), decoded.size(), 0.8f);
+    // Every hit holds a voice until its buffer ends, so an inaudible tail
+    // (common in mp3 piano/pad samples) wastes voices. Cut where it stays
+    // below -60 dB and fade the last 5 ms so the cut doesn't click.
+    const size_t originalFrames = decoded.size() / 2;
+    size_t endFrame = originalFrames;
+    while (endFrame > 0 && std::fabs(decoded[2 * (endFrame - 1)]) < 0.001f &&
+           std::fabs(decoded[2 * (endFrame - 1) + 1]) < 0.001f) {
+        --endFrame;
+    }
+    const size_t fadeFrames = std::min<size_t>(endFrame, static_cast<size_t>(engine.getSampleRate()) / 200);
+    for (size_t i = 0; i < fadeFrames; ++i) {
+        float gain = static_cast<float>(fadeFrames - i) / static_cast<float>(fadeFrames);
+        decoded[2 * (endFrame - fadeFrames + i)] *= gain;
+        decoded[2 * (endFrame - fadeFrames + i) + 1] *= gain;
+    }
+    decoded.resize(endFrame * 2);
     samples = std::make_shared<const std::vector<float>>(std::move(decoded));
     if (verbose) {
         printf("         AudioPlayer::AudioPlayer::%s - Loaded.\n", filepath);
-        printf("         AudioPlayer::AudioPlayer::Rate %d, frames %zu\n", engine.getSampleRate(), samples->size() / 2);
+        printf("         AudioPlayer::AudioPlayer::Rate %d, %.2f s (trimmed from %.2f s)\n", engine.getSampleRate(),
+            samples->size() / 2.0 / engine.getSampleRate(), originalFrames / static_cast<double>(engine.getSampleRate()));
         printf("         AudioPlayer::AudioPlayer::Constructed.\n");
     }
 }

@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
 
     GstAudioEngine::Config config;
     config.sampleRate = 48000;
-    config.voices = 8;
+    config.voices = 32;
     config.sink = "wavenc ! filesink location=\"" + outPath + "\"";
     GstAudioEngine engine(config);
     if (!engine.start()) {

@@ -1,7 +1,7 @@
 audioMixer:
   mixer_buffer_size: 4048
   mixer_sample_rate: 48000
-  mixer_channels: 8
+  mixer_channels: 32  # simultaneous sounds (GStreamer voices)
   audio_format: 2 # 1 = WSL, 2 = PI
 bpm: 120.0
 num_samples: 200

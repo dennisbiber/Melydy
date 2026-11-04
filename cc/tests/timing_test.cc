@@ -17,9 +17,12 @@
 #include "../AudioProcessor.h"
 #include "../GstAudioEngine.h"
 #include <cstdio>
+#include <cstdlib>
+#include <string>
 #include <fstream>
 #include <memory>
 #include <random>
+#include <algorithm>
 #include <thread>
 #include <vector>
 
@@ -38,12 +41,19 @@ int main(int argc, char* argv[]) {
     const double beatDivisions = 4.0;
     MasterClock masterClock(bpm, beatDivisions);
     masterClock.start();
-    masterClock.setLookahead(std::chrono::milliseconds(50));
-
+    // Environment overrides (used by output_probe.sh to test real devices).
+    auto env = [](const char* name, const char* fallback) {
+        const char* v = std::getenv(name);
+        return std::string(v ? v : fallback);
+    };
     GstAudioEngine::Config config;
     config.sampleRate = 48000;
-    config.voices = 32;
-    config.sink = "wavenc ! filesink location=\"" + outPath + "\"";
+    config.voices = std::stoi(env("MELYDY_VOICES", "32"));
+    config.sink = env("MELYDY_SINK", ("wavenc ! filesink location=\"" + outPath + "\"").c_str());
+    config.useSinkClock = env("MELYDY_SINK_CLOCK", "1") == "1";
+    config.feedAheadMs = std::stoi(env("MELYDY_FEED_AHEAD_MS", "10"));
+    const bool simulateLoad = env("MELYDY_NO_LOAD", "0") != "1";
+    masterClock.setLookahead(std::chrono::milliseconds(std::max(50, config.feedAheadMs + 40)));
     GstAudioEngine engine(config);
     if (!engine.start()) {
         return 1;
@@ -83,6 +93,9 @@ int main(int argc, char* argv[]) {
             }
         }
         // Simulated CPU load: busy-wait, so the scheduler thread really is late.
+        if (!simulateLoad) {
+            return;
+        }
         auto until = std::chrono::steady_clock::now() + std::chrono::microseconds(busyMicros(rng));
         while (std::chrono::steady_clock::now() < until) {
         }

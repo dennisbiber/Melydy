@@ -49,6 +49,7 @@ public:
         std::string sink = "autoaudiosink";      // any gst-launch sink description
         int mixerLatencyMs = 10;                 // how long audiomixer waits for late data
         bool useSinkClock = true;                // audio device's clock drives everything
+        int feedAheadMs = 10;                    // how far ahead of the clock voices are filled
         bool verbose = false;
     };
 

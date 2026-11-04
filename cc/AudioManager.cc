@@ -13,6 +13,7 @@ GstAudioEngine::Config AudioManager::makeEngineConfig(const YAML::Node& audioMix
     config.sink = audioMixerConfig["gst_sink"].as<std::string>("autoaudiosink");
     config.mixerLatencyMs = audioMixerConfig["gst_mixer_latency_ms"].as<int>(10);
     config.useSinkClock = audioMixerConfig["gst_use_sink_clock"].as<bool>(true);
+    config.feedAheadMs = audioMixerConfig["gst_feed_ahead_ms"].as<int>(10);
     config.verbose = verbose;
     return config;
 }
@@ -38,7 +39,10 @@ AudioManager::AudioManager(MasterClock& mc, KeyboardEvent& kb, LooperManager& lm
     }
     // The scheduler runs each tick `lookahead` early so its buffers reach
     // audiomixer before their timestamp comes due.
-    int lookaheadMs = audioMixerConfig["scheduler_lookahead_ms"].as<int>(50);
+    // Notes must be scheduled beyond what the feeder has already committed
+    // (feed-ahead + one 10 ms chunk + scheduler jitter).
+    int feedAheadMs = audioMixerConfig["gst_feed_ahead_ms"].as<int>(10);
+    int lookaheadMs = std::max(audioMixerConfig["scheduler_lookahead_ms"].as<int>(50), feedAheadMs + 40);
     masterClock.setLookahead(std::chrono::milliseconds(lookaheadMs));
     printf("   AudioManager::GStreamer audio engine running (lookahead %d ms).\n", lookaheadMs);
     if (verbose) {

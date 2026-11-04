@@ -207,8 +207,8 @@ bool GstAudioEngine::start() {
     }
     gst_query_unref(query);
 
-    printf("   GstAudioEngine::start::Playing. Clock: %s, voices: %d, pipeline latency: %.1f ms\n",
-        GST_OBJECT_NAME(clock), config.voices,
+    printf("   GstAudioEngine::start::Playing. Clock: %s, voices: %d, feed-ahead: %d ms, pipeline latency: %.1f ms\n",
+        GST_OBJECT_NAME(clock), config.voices, config.feedAheadMs,
         std::chrono::duration<double, std::milli>(pipelineLatency).count());
 
     // Say which output device element is really in use. autoaudiosink picks
@@ -433,7 +433,7 @@ void GstAudioEngine::pushChunk(Voice& voice, int64_t chunkFrames) {
 // voice's old note can still be faded out.
 void GstAudioEngine::feederLoop() {
     const int64_t chunkFrames = config.sampleRate / 100;  // 10 ms
-    const Duration feedAhead = std::chrono::milliseconds(10);
+    const Duration feedAhead = std::chrono::milliseconds(config.feedAheadMs);
     while (feederRunning) {
         const TimePoint now = StreamClock::now();
         const int64_t horizon = frameAt(now + feedAhead);

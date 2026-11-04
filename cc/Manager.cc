@@ -57,6 +57,8 @@ void Manager::setNotesConfig() {
     if (verbose) {
         printf("   Manager::setNotesConfig::Entered.\n");
     }
+    const size_t total = notesConfig.size();
+    size_t loaded = 0, failed = 0, index = 0;
     for (const auto& note : notesConfig) {
         NoteConfiguration config;
         config.noteName = note.first.as<std::string>();
@@ -64,8 +66,19 @@ void Manager::setNotesConfig() {
         std::string filepath = noteConfig["filepath"].as<std::string>();
         config.keycode = static_cast<SDL_Scancode>(noteConfig["keycode"].as<int>());
         config.functionAssignment = noteConfig["fnNumber"].as<std::string>();
-        audioManager.addAudioPlayer(filepath.c_str(), config);
+        if (audioManager.addAudioPlayer(filepath.c_str(), config)) {
+            ++loaded;
+        } else {
+            ++failed;
+        }
+        // Keep the window alive while loading: without this the window sits
+        // unserviced, shows a frozen copy of the desktop, and the OS offers
+        // to force-quit it.
+        ++index;
+        SDL_PumpEvents();
+        graphicManager.renderFrame("Loading samples " + std::to_string(index) + " / " + std::to_string(total));
     }
+    printf("   Manager::setNotesConfig::Loaded %zu of %zu samples (%zu failed).\n", loaded, total, failed);
 }
 
 void Manager::setFunction() {

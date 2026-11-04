@@ -187,6 +187,13 @@ void GstAudioEngine::shutdown() {
 
 std::vector<float> GstAudioEngine::decodeFile(const std::string& path) const {
     std::vector<float> out;
+    // Fail fast with a clear message for the most common config mistake.
+    if (FILE* probe = std::fopen(path.c_str(), "rb")) {
+        std::fclose(probe);
+    } else {
+        printf("   ---GstAudioEngine::decodeFile::Cannot open file: %s\n", path.c_str());
+        return out;
+    }
     // decodebin picks the right demuxer/decoder; the capsfilter forces the
     // output into the engine's format, so resampling/channel mapping happen
     // here once at load time instead of on every hit.
@@ -206,26 +213,46 @@ std::vector<float> GstAudioEngine::decodeFile(const std::string& path) const {
     g_object_set(src, "location", path.c_str(), nullptr);  // set directly: no quoting issues
     gst_object_unref(src);
     GstAppSink* sink = GST_APP_SINK(gst_bin_get_by_name(GST_BIN(decoder), "sink"));
+    GstBus* bus = gst_element_get_bus(decoder);
 
     gst_element_set_state(decoder, GST_STATE_PLAYING);
-    while (GstSample* sample = gst_app_sink_pull_sample(sink)) {  // NULL at EOS or error
-        GstBuffer* buffer = gst_sample_get_buffer(sample);
-        GstMapInfo map;
-        if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
-            const float* data = reinterpret_cast<const float*>(map.data);
-            out.insert(out.end(), data, data + map.size / sizeof(float));
-            gst_buffer_unmap(buffer, &map);
+    // Don't use gst_app_sink_pull_sample(): if decoding fails (not an audio
+    // file, unsupported format) appsink never sees EOS and that call blocks
+    // forever. Poll with a timeout and watch the bus for errors instead.
+    bool failed = false;
+    const gint64 deadline = g_get_monotonic_time() + 30 * G_TIME_SPAN_SECOND;
+    while (true) {
+        GstSample* sample = gst_app_sink_try_pull_sample(sink, 100 * GST_MSECOND);
+        if (sample != nullptr) {
+            GstBuffer* buffer = gst_sample_get_buffer(sample);
+            GstMapInfo map;
+            if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
+                const float* data = reinterpret_cast<const float*>(map.data);
+                out.insert(out.end(), data, data + map.size / sizeof(float));
+                gst_buffer_unmap(buffer, &map);
+            }
+            gst_sample_unref(sample);
+            continue;
         }
-        gst_sample_unref(sample);
+        if (gst_app_sink_is_eos(sink)) {
+            break;  // finished normally
+        }
+        if (GstMessage* msg = gst_bus_pop_filtered(bus, GST_MESSAGE_ERROR)) {
+            GError* err = nullptr;
+            gst_message_parse_error(msg, &err, nullptr);
+            printf("   ---GstAudioEngine::decodeFile::%s: %s\n", path.c_str(), err ? err->message : "?");
+            g_clear_error(&err);
+            gst_message_unref(msg);
+            failed = true;
+            break;
+        }
+        if (g_get_monotonic_time() > deadline) {
+            printf("   ---GstAudioEngine::decodeFile::Timed out decoding %s\n", path.c_str());
+            failed = true;
+            break;
+        }
     }
-
-    GstBus* bus = gst_element_get_bus(decoder);
-    if (GstMessage* msg = gst_bus_pop_filtered(bus, GST_MESSAGE_ERROR)) {
-        GError* err = nullptr;
-        gst_message_parse_error(msg, &err, nullptr);
-        printf("   ---GstAudioEngine::decodeFile::%s: %s\n", path.c_str(), err ? err->message : "?");
-        g_clear_error(&err);
-        gst_message_unref(msg);
+    if (failed) {
         out.clear();
     }
     gst_object_unref(bus);

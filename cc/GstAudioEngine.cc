@@ -33,6 +33,26 @@ GstBusSyncReply busSyncHandler(GstBus*, GstMessage* msg, gpointer) {
     return GST_BUS_PASS;
 }
 
+// audiomixer flags its output GAP ("no data here") whenever no voice is
+// playing. Audio sinks like pulsesink don't feed GAP buffers to the sound
+// server, so its stream runs dry between hits, underflows, and loses the start
+// of the next hit while it resyncs. Turn GAP buffers back into real silence so
+// the device gets a continuous stream.
+GstPadProbeReturn clearGapProbe(GstPad*, GstPadProbeInfo* info, gpointer) {
+    GstBuffer* buffer = GST_PAD_PROBE_INFO_BUFFER(info);
+    if (buffer != nullptr && GST_BUFFER_FLAG_IS_SET(buffer, GST_BUFFER_FLAG_GAP)) {
+        buffer = gst_buffer_make_writable(buffer);
+        GstMapInfo map;
+        if (gst_buffer_map(buffer, &map, GST_MAP_WRITE)) {
+            std::memset(map.data, 0, map.size);  // F32 zero == silence
+            gst_buffer_unmap(buffer, &map);
+        }
+        GST_BUFFER_FLAG_UNSET(buffer, GST_BUFFER_FLAG_GAP);
+        GST_PAD_PROBE_INFO_DATA(info) = buffer;
+    }
+    return GST_PAD_PROBE_OK;
+}
+
 // Called when GStreamer is done with a buffer: drop our ref on the samples.
 void releaseSamples(gpointer userData) {
     delete static_cast<GstAudioEngine::SampleData*>(userData);
@@ -103,6 +123,12 @@ bool GstAudioEngine::start() {
     gst_bus_set_sync_handler(bus, busSyncHandler, nullptr, nullptr);
     gst_object_unref(bus);
 
+    GstElement* mixer = gst_bin_get_by_name(GST_BIN(pipeline), "mix");
+    GstPad* mixerSrc = gst_element_get_static_pad(mixer, "src");
+    gst_pad_add_probe(mixerSrc, GST_PAD_PROBE_TYPE_BUFFER, clearGapProbe, nullptr, nullptr);
+    gst_object_unref(mixerSrc);
+    gst_object_unref(mixer);
+
     voices.resize(config.voices);
     for (int i = 0; i < config.voices; ++i) {
         std::string name = "voice" + std::to_string(i);
@@ -151,7 +177,11 @@ void GstAudioEngine::shutdown() {
     if (pipeline == nullptr) {
         return;
     }
-    if (running) {
+    // Only file sinks need draining (wavenc rewrites its header at EOS). For
+    // a live sound card, waiting for EOS meant sitting through up to 5 s of
+    // queued audio after the window closed, so just stop.
+    const bool drain = config.sink.find("filesink") != std::string::npos;
+    if (running && drain) {
         // EOS on every voice -> audiomixer sends EOS downstream once all are
         // done -> file sinks (wavenc) can finalize their headers.
         {
@@ -167,6 +197,8 @@ void GstAudioEngine::shutdown() {
             gst_message_unref(msg);
         }
         gst_object_unref(bus);
+    }
+    if (running) {
         if (lateHits || droppedHits) {
             printf("   GstAudioEngine::shutdown::Late hits: %llu, dropped hits (no free voice): %llu\n",
                 static_cast<unsigned long long>(lateHits), static_cast<unsigned long long>(droppedHits));

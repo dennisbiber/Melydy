@@ -184,6 +184,11 @@ int main(int argc, char* argv[]) {
 
     manager->runEventLoop();   // returns when the window is closed / Ctrl-C
 
+    // The SDL event loop is gone, so SDL's Ctrl-C -> SDL_QUIT conversion no
+    // longer reaches anyone. Restore the default so Ctrl-C during shutdown
+    // actually terminates instead of being swallowed.
+    signal(SIGINT, SIG_DFL);
+
     masterClock.stop();
     schedulerThread.join();
     manager.reset();           // tears down the audio engine and window

@@ -19,7 +19,7 @@ long long toMicros(Duration d) {
 
 MasterClock::MasterClock(double bpm, double beatDivisions, bool vb, bool sVb, bool timeVerbose) : quit(false),
     currentDivisionOfBeat(0), filename("duration_logs"),
-    divisionDurationAsDuration(Duration(0)), lookahead(std::chrono::milliseconds(30)),
+    divisionDurationAsDuration(Duration(0)), lookahead(std::chrono::milliseconds(50)),
     processingDuration(Duration(0)), tickTime(TimePoint(Duration(0))), inTick(false),
     logStop(false)
     {

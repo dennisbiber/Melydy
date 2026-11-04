@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     const double beatDivisions = 4.0;
     MasterClock masterClock(bpm, beatDivisions);
     masterClock.start();
-    masterClock.setLookahead(std::chrono::milliseconds(30));
+    masterClock.setLookahead(std::chrono::milliseconds(50));
 
     GstAudioEngine::Config config;
     config.sampleRate = 48000;

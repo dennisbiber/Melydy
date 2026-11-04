@@ -38,7 +38,7 @@ AudioManager::AudioManager(MasterClock& mc, KeyboardEvent& kb, LooperManager& lm
     }
     // The scheduler runs each tick `lookahead` early so its buffers reach
     // audiomixer before their timestamp comes due.
-    int lookaheadMs = audioMixerConfig["scheduler_lookahead_ms"].as<int>(30);
+    int lookaheadMs = audioMixerConfig["scheduler_lookahead_ms"].as<int>(50);
     masterClock.setLookahead(std::chrono::milliseconds(lookaheadMs));
     printf("   AudioManager::GStreamer audio engine running (lookahead %d ms).\n", lookaheadMs);
     if (verbose) {

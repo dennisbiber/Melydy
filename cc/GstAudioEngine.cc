@@ -5,6 +5,7 @@
 #include <gst/app/gstappsrc.h>
 #include <gst/base/gstbasesink.h>
 #include <gst/audio/gstaudiobasesink.h>
+#include <algorithm>
 #include <cstdio>
 #include <cmath>
 #include <cstring>
@@ -84,27 +85,7 @@ GstPadProbeReturn clearGapProbe(GstPad*, GstPadProbeInfo* info, gpointer userDat
     return GST_PAD_PROBE_OK;
 }
 
-// Called when GStreamer is done with a buffer: drop our ref on the samples.
-void releaseSamples(gpointer userData) {
-    delete static_cast<GstAudioEngine::SampleData*>(userData);
-}
-
-GstBuffer* makeBuffer(const GstAudioEngine::SampleData& samples, int rate, TimePoint pts) {
-    gsize bytes = samples->size() * sizeof(float);
-    // Zero-copy: the buffer points straight at the player's decoded samples and
-    // holds a shared_ptr copy until GStreamer releases it.
-    GstBuffer* buffer = gst_buffer_new_wrapped_full(GST_MEMORY_FLAG_READONLY,
-        const_cast<float*>(samples->data()), bytes, 0, bytes,
-        new GstAudioEngine::SampleData(samples), releaseSamples);
-    guint64 frames = samples->size() / kChannels;
-    GST_BUFFER_PTS(buffer) = static_cast<GstClockTime>(pts.time_since_epoch().count());
-    GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale(frames, GST_SECOND, rate);
-    // Each hit is its own island of audio on this voice. DISCONT tells
-    // audiomixer to place it by its timestamp instead of assuming it follows
-    // the previous buffer back-to-back.
-    GST_BUFFER_FLAG_SET(buffer, GST_BUFFER_FLAG_DISCONT);
-    return buffer;
-}
+constexpr int64_t kNoCut = INT64_MAX;
 } // namespace
 
 GstAudioEngine::GstAudioEngine(const Config& cfg) : config(cfg) {
@@ -166,14 +147,13 @@ bool GstAudioEngine::start() {
         voices[i].src = GST_APP_SRC(gst_bin_get_by_name(GST_BIN(pipeline), name.c_str()));
     }
 
-    // Prime every voice with 10 ms of silence at PTS 0. This lets caps and
-    // segments flow so the mixer and sink start running (and the audio
-    // sink's clock starts ticking) before the first real hit.
-    const size_t primeFrames = static_cast<size_t>(config.sampleRate) / 100;
-    auto silence = std::make_shared<const std::vector<float>>(primeFrames * kChannels, 0.0f);
+    // Hand every voice its first 20 ms of (silent) stream so caps and
+    // segments flow and the mixer and sink start running before the first
+    // note. From then on the feeder thread keeps every voice topped up.
+    const int64_t chunkFrames = config.sampleRate / 100;
     for (auto& voice : voices) {
-        gst_app_src_push_buffer(voice.src, makeBuffer(silence, config.sampleRate, TimePoint(Duration(0))));
-        voice.busyUntil = TimePoint(Duration(gst_util_uint64_scale(primeFrames, GST_SECOND, config.sampleRate)));
+        pushChunk(voice, chunkFrames);
+        pushChunk(voice, chunkFrames);
     }
 
     // Make the audio device the pipeline's clock.
@@ -262,12 +242,18 @@ bool GstAudioEngine::start() {
     gst_iterator_free(it);
     gst_object_unref(clock);
     running = true;
+    feederRunning = true;
+    feederThread = std::thread(&GstAudioEngine::feederLoop, this);
     return true;
 }
 
 void GstAudioEngine::shutdown() {
     if (pipeline == nullptr) {
         return;
+    }
+    feederRunning = false;
+    if (feederThread.joinable()) {
+        feederThread.join();
     }
     // Only file sinks need draining (wavenc rewrites its header at EOS). For
     // a live sound card, waiting for EOS meant sitting through up to 5 s of
@@ -294,14 +280,11 @@ void GstAudioEngine::shutdown() {
         printf("   GstAudioEngine::shutdown::Mixer output: %llu buffers with sound, loudest peak %.3f "
                "(0 = nothing ever reached the output device)\n",
             static_cast<unsigned long long>(outputMeter.audibleBuffers.load()), outputMeter.maxPeak.load());
-        if (lateHits || droppedHits) {
-            printf("   GstAudioEngine::shutdown::Late hits: %llu, dropped hits (no free voice): %llu\n",
-                static_cast<unsigned long long>(lateHits), static_cast<unsigned long long>(droppedHits));
-        }
-        if (droppedHits) {
-            printf("   ---GstAudioEngine::shutdown::All %d voices were busy %llu time(s), so those key presses were\n"
-                   "      silent. Raise audioMixer.mixer_channels, or use shorter samples.\n",
-                config.voices, static_cast<unsigned long long>(droppedHits));
+        if (lateHits || stolenVoices) {
+            printf("   GstAudioEngine::shutdown::Late hits (started a few ms late): %llu, "
+                   "voices stolen (all %d busy, oldest note cut): %llu\n",
+                static_cast<unsigned long long>(lateHits), config.voices,
+                static_cast<unsigned long long>(stolenVoices));
         }
     }
     StreamClock::detach();
@@ -394,13 +377,88 @@ std::vector<float> GstAudioEngine::decodeFile(const std::string& path) const {
     return out;
 }
 
+int64_t GstAudioEngine::Note::endFrame() const {
+    const int64_t natural = startFrame + static_cast<int64_t>(samples->size() / kChannels);
+    return natural < cutFrame ? natural : cutFrame;
+}
+
+int64_t GstAudioEngine::frameAt(TimePoint t) const {
+    const int64_t ns = t.time_since_epoch().count();
+    return ns <= 0 ? 0 : static_cast<int64_t>(gst_util_uint64_scale_round(ns, config.sampleRate, GST_SECOND));
+}
+
+// Build and push the next `chunkFrames` of this voice's stream: silence plus
+// whatever part of its note(s) falls inside the chunk, at the exact frame.
+void GstAudioEngine::pushChunk(Voice& voice, int64_t chunkFrames) {
+    const int64_t start = voice.pushedFrame;
+    const int64_t end = start + chunkFrames;
+    const int64_t fadeFrames = config.sampleRate / 200;  // 5 ms
+    GstBuffer* buffer = gst_buffer_new_allocate(nullptr, chunkFrames * kChannels * sizeof(float), nullptr);
+    GstMapInfo map;
+    gst_buffer_map(buffer, &map, GST_MAP_WRITE);
+    float* out = reinterpret_cast<float*>(map.data);
+    std::memset(out, 0, map.size);
+    for (const Note& note : voice.notes) {
+        const int64_t from = std::max(start, note.startFrame);
+        const int64_t to = std::min(end, note.endFrame());
+        const float* in = note.samples->data();
+        for (int64_t f = from; f < to; ++f) {
+            float gain = 1.0f;
+            if (note.cutFrame != kNoCut && f >= note.cutFrame - fadeFrames) {
+                gain = static_cast<float>(note.cutFrame - f) / static_cast<float>(fadeFrames);
+            }
+            const int64_t i = (f - note.startFrame) * kChannels;
+            out[(f - start) * kChannels] += in[i] * gain;
+            out[(f - start) * kChannels + 1] += in[i + 1] * gain;
+        }
+    }
+    gst_buffer_unmap(buffer, &map);
+    voice.notes.erase(std::remove_if(voice.notes.begin(), voice.notes.end(),
+        [end](const Note& note) { return note.endFrame() <= end; }), voice.notes.end());
+
+    const GstClockTime pts = gst_util_uint64_scale(start, GST_SECOND, config.sampleRate);
+    GST_BUFFER_PTS(buffer) = pts;
+    GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale(end, GST_SECOND, config.sampleRate) - pts;
+    if (start == 0) {
+        GST_BUFFER_FLAG_SET(buffer, GST_BUFFER_FLAG_DISCONT);
+    }
+    gst_app_src_push_buffer(voice.src, buffer);  // takes ownership; never blocks (max-bytes=0)
+    voice.pushedFrame = end;
+}
+
+// Keeps every voice's stream filled to ~10 ms ahead of the clock. Only that
+// much is committed in advance, so a note scheduled further ahead (the
+// scheduler works `lookahead` ahead, 50 ms by default) always lands in audio
+// that hasn't been pushed yet: it starts on its exact sample, and a stolen
+// voice's old note can still be faded out.
+void GstAudioEngine::feederLoop() {
+    const int64_t chunkFrames = config.sampleRate / 100;  // 10 ms
+    const Duration feedAhead = std::chrono::milliseconds(10);
+    while (feederRunning) {
+        const TimePoint now = StreamClock::now();
+        const int64_t horizon = frameAt(now + feedAhead);
+        {
+            std::lock_guard<std::mutex> lock(voicesMutex);
+            for (auto& voice : voices) {
+                while (voice.pushedFrame < horizon) {
+                    pushChunk(voice, chunkFrames);
+                }
+            }
+        }
+        StreamClock::sleepUntil(now + std::chrono::milliseconds(5));
+    }
+}
+
 int GstAudioEngine::getActiveVoices() {
     std::lock_guard<std::mutex> lock(voicesMutex);
-    TimePoint now = StreamClock::now();
+    const int64_t nowFrame = frameAt(StreamClock::now());
     int active = 0;
     for (const auto& voice : voices) {
-        if (voice.busyUntil > now) {
-            ++active;
+        for (const auto& note : voice.notes) {
+            if (note.endFrame() > nowFrame) {
+                ++active;
+                break;
+            }
         }
     }
     return active;
@@ -411,29 +469,47 @@ bool GstAudioEngine::scheduleAt(const SampleData& samples, TimePoint when) {
         return false;
     }
     std::lock_guard<std::mutex> lock(voicesMutex);
-    // Buffers on one appsrc must not overlap in time, so find a voice that
-    // has finished its previous sound by `when`. This is the same job
-    // SDL_mixer did when you passed channel -1 to Mix_PlayChannel.
+    int64_t startFrame = frameAt(when);
+
+    // A voice is free if everything on it has finished by the new start.
     Voice* chosen = nullptr;
     for (auto& voice : voices) {
-        if (voice.busyUntil <= when && (chosen == nullptr || voice.busyUntil < chosen->busyUntil)) {
+        bool freeAtStart = std::all_of(voice.notes.begin(), voice.notes.end(),
+            [startFrame](const Note& note) { return note.endFrame() <= startFrame; });
+        if (freeAtStart) {
             chosen = &voice;
+            break;
         }
     }
     if (chosen == nullptr) {
-        ++droppedHits;
-        if (config.verbose) {
-            printf("   ---GstAudioEngine::scheduleAt::No free voice; hit dropped.\n");
+        // Steal the voice whose newest note started earliest, and fade that
+        // note out. The fade has to sit in audio not yet pushed.
+        int64_t oldest = INT64_MAX;
+        for (auto& voice : voices) {
+            int64_t newest = 0;
+            for (const auto& note : voice.notes) {
+                newest = std::max(newest, note.startFrame);
+            }
+            if (newest < oldest) {
+                oldest = newest;
+                chosen = &voice;
+            }
         }
-        return false;
+        const int64_t cut = std::max(startFrame, chosen->pushedFrame + config.sampleRate / 200);
+        for (auto& note : chosen->notes) {
+            note.cutFrame = std::min(note.cutFrame, cut);
+        }
+        ++stolenVoices;
     }
-    if (when < StreamClock::now()) {
-        // Still pushed: audiomixer waits `mixerLatencyMs` for stragglers, and
-        // anything later than that gets its start clipped.
+    if (startFrame < chosen->pushedFrame) {
+        // Already committed past this time: start right after, a few ms late,
+        // rather than losing the attack.
+        startFrame = chosen->pushedFrame;
         ++lateHits;
     }
-    GstBuffer* buffer = makeBuffer(samples, config.sampleRate, when);
-    chosen->busyUntil = when + Duration(static_cast<Duration::rep>(GST_BUFFER_DURATION(buffer)));
-    gst_app_src_push_buffer(chosen->src, buffer);  // takes ownership
+    Note note;
+    note.samples = samples;
+    note.startFrame = startFrame;
+    chosen->notes.push_back(std::move(note));
     return true;
 }

@@ -32,8 +32,8 @@ appsrc voiceN ─┘
 How a sound is played now:
 1. The beat grid is pipeline running time: division `k` is at `k * (60 / bpm / beatDivisions)`.
 2. `MasterClock` runs each batch `scheduler_lookahead_ms` *before* its grid time and exposes that grid time as `getTickTime()`.
-3. `AudioPlayer::playAt(tickTime)` pushes the decoded sample into a free `appsrc` voice with `PTS = tickTime`.
-4. `audiomixer` places the buffer at the exact sample for that PTS.
+3. `AudioPlayer::playAt(tickTime)` assigns the note to a free voice starting at the exact frame for `tickTime`. If all voices are busy, the oldest note is faded out over 5 ms and its voice reused (voice stealing).
+4. Each voice is a continuous `appsrc` stream fed in 10 ms chunks, so `audiomixer` always has data on every input and never relies on its idle-input timeout path (that path came out silent on PipeWire + Bluetooth).
 5. The audio sink's own clock (e.g. `GstPulseSinkClock`) is made the pipeline clock, so the scheduler, the mixer and the speakers all run on the sound card's time. GStreamer doesn't do this by itself for live pipelines: it picks `GstSystemClock` and makes the sink keep correcting itself against it. On PipeWire with Bluetooth, that made the sink discard every buffer as late, so the mixer had sound and the speakers were silent. Sinks without a clock (file sinks) fall back to the system clock.
 
 Timing bugs this fixes:
@@ -48,6 +48,7 @@ Live key presses are still quantized to the next division, as before. Response t
 ### Threads
 * **Main thread:** SDL. It pumps keyboard events (`KeyboardEvent::processEvent`) and draws the window (`GraphicPlayer::renderFrame`). SDL requires both to run on the thread that created the window. Pumping events from a separate keyboard thread caused the intermittent UI crashes, and the window was never drawn, which is why it showed up transparent.
 * **Scheduler thread:** `MasterClock::executeScheduledBatches`.
+* **Feeder thread** (`GstAudioEngine::feederLoop`): keeps every voice's stream filled ~10 ms ahead of the clock, writing notes in at their exact sample (silence when idle).
 * **GStreamer's own threads:** mixing and output.
 
 Closing the window or pressing Ctrl-C shuts down cleanly: SDL turns Ctrl-C into a quit event.
@@ -81,7 +82,7 @@ audioMixer:
   mixer_channels: 32              # number of GStreamer voices (simultaneous sounds)
   gst_sink: "autoaudiosink"       # optional; e.g. "alsasink device=hw:0 buffer-time=20000 latency-time=5000"
   gst_mixer_latency_ms: 10        # optional; how long audiomixer waits for late buffers
-  scheduler_lookahead_ms: 30      # optional; how far ahead of each tick the scheduler runs
+  scheduler_lookahead_ms: 50      # optional; how far ahead of each tick the scheduler runs (must exceed ~25 ms)
   gst_use_sink_clock: true        # optional; run everything on the audio device's clock (see below)
   # mixer_buffer_size and audio_format are ignored now (kept so old configs still load)
 ```
